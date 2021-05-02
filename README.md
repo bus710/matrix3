@@ -2,7 +2,7 @@
 
 <img src="assets/heart.png" width="300">
 
-A toy project to drive Sense Hat's LED matrix by using Rust and Flutter 
+A toy project to drive Sense Hat's LED matrix by using Rust and Flutter. 
 
 <br/><br/>
 
