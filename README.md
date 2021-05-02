@@ -34,6 +34,13 @@ Enable i2c communication by using raspi-config.
 
 ```sh
 $ sudo raspi-config
+# Interface options => I2C => Enable
+
+# To confirm:
+# The entry 0x46 should have some value, which indicate existence of AATINY MCU
+# https://pinout.xyz/pinout/sense_hat
+$ sudo apt install i2c-tools
+$ sudo i2cdetect -y 1 
 ```
 
 <br/>
