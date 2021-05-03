@@ -8,43 +8,47 @@ use std::error::Error;
 use std::thread;
 use std::time::Duration;
 
-// use rppal::gpio::Gpio;
-// use rppal::pwm::{Channel, Pwm};
-// use rppal::spi::{Bus, Mode, SlaveSelect, Spi};
-// use rppal::uart::{Parity, Uart};
-
 use rppal::i2c::I2c;
 use rppal::system::DeviceInfo;
 
 const ADDR_MATRIX: u16 = 0x0046;
+const LEN: usize = 193;
 
 fn main() -> Result<(), Box<dyn Error>> {
     println!("Hello, world!: {}", DeviceInfo::new()?.model());
 
-    let mut sense_hat_matrix = I2c::new()?;
-    println!("{:?}", sense_hat_matrix);
-    // I2c { bus: 1, funcs: Capabilities {
-    // addr_10bit: false,
-    // i2c_block_read: true,
-    // i2c_block_write: true,
-    // smbus_quick_command: true,
-    // smbus_receive_byte: true,
-    // smbus_send_byte: true,
-    // smbus_read_byte: true,
-    // smbus_write_byte: true,
-    // smbus_read_word: true,
-    // smbus_write_word: true,
-    // smbus_process_call: true,
-    // smbus_block_read: false,
-    // smbus_block_write: true,
-    // smbus_block_process_call: false,
-    // smbus_pec: true,
-    // smbus_host_notify: false },
-    // i2cdev: File { fd: 3, path: "/dev/i2c-1", read: true, write: true },
-    // addr_10bit: false, address: 0, not_sync: PhantomData }
+    // https://users.rust-lang.org/t/questions-about-mut-t-and-move-semantics-mut-t-is-move-only/37484/13
+    // let mut sh= I2c::new()?;
+    // let sensehat_matrix = &mut sh;
+    let sensehat_matrix = &mut I2c::new()?;
 
-    sense_hat_matrix.set_slave_address(ADDR_MATRIX)?;
+    sensehat_matrix.set_slave_address(ADDR_MATRIX)?;
+    // println!("{:?}", sensehat_matrix);
+
+    let res = write_data(sensehat_matrix, 10);
+    println!("{:?}", res);
+    let res = write_data(sensehat_matrix, 20);
+    println!("{:?}", res);
+    let res = write_data(sensehat_matrix, 0);
+    println!("{:?}", res);
 
     println!("Bye!");
     Ok(())
+}
+
+fn write_data(port: &mut I2c, level: u8) -> Result<usize, rppal::i2c::Error> {
+    let mut data: [u8; LEN] = [0; LEN];
+
+    thread::sleep(Duration::from_millis(1000));
+
+    // https://dev.to/anilkhandei/mutable-arrays-in-rust-1k5o
+    for (_, v) in data.iter_mut().enumerate() {
+        *v = level;
+    }
+    data[0] = 0;
+    data[1] = 63;
+    data[10] = 63;
+    data[19] = 63;
+    let res = port.write(&data);
+    res
 }
