@@ -7,16 +7,18 @@
 mod matrix;
 
 use crate::matrix::SenseHat;
-// use std::error::Error;
 
-// fn main() -> Result<(), Box<dyn Error>> {
 fn main() {
     println!("Hello, world!");
 
-    let mut sh = SenseHat::new();
-    sh.write_data(10);
-    sh.write_data(20);
-    sh.write_data(0);
+    let mut sh = match SenseHat::new() {
+        Ok(v) => v,
+        Err(e) => panic!("{}", e.to_string()),
+    };
+
+    sh.write_data(10).unwrap();
+    sh.write_data(20).unwrap();
+    sh.write_data(0).unwrap();
 
     println!("Bye!");
 }

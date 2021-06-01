@@ -14,29 +14,29 @@ pub struct SenseHat {
 }
 
 impl SenseHat {
-    pub fn new() -> SenseHat {
+    pub fn new() -> Result<SenseHat, String> {
         let r = DeviceInfo::new();
         match r {
             Ok(v) => println!("{:?}", v),
-            Err(_) => panic!(),
+            Err(e) => return Err(e.to_string()),
         };
 
         let r = I2c::new();
         let r = match r {
             Ok(v) => v,
-            Err(_) => panic!(),
+            Err(e) => return Err(e.to_string()),
         };
 
         let mut r = r;
         let s = r.set_slave_address(ADDR_MATRIX);
         match s {
             Ok(_) => (),
-            Err(_) => panic!(),
+            Err(e) => return Err(e.to_string()),
         }
 
         let r = Arc::new(Mutex::new(r));
 
-        SenseHat { matrix: r }
+        Ok(SenseHat { matrix: r })
     }
 
     pub fn write_data(&mut self, level: u8) -> Result<usize, rppal::i2c::Error> {

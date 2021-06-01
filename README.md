@@ -9,7 +9,7 @@ A toy project to drive Sense Hat's LED matrix by using Rust and Flutter.
 ## 1. Description
 
 This project consists of 2 parts:
-- The UI: a simple web UI based on Flutter/Web that can modify the matrix data for 64 LEDs on Sense Hat.
+- The UI: a simple web UI based on [egui](https://github.com/emilk/egui) that can modify the matrix data for 64 LEDs on Sense Hat.
 - The service: a Rust based Linux system daemon with WebSocket that accepts parameters from the web UI and controls the LEDs via I2C.
 
 <br/>
