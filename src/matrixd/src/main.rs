@@ -6,6 +6,8 @@
 
 mod matrix;
 
+use std::thread;
+use std::time::Duration;
 use crate::matrix::{Data, SenseHatRunner};
 
 #[tokio::main]
@@ -21,18 +23,20 @@ async fn main() {
 
     sh_runner.run().await;
 
-    let d = matrix::Data::new();
+    let mut d = matrix::Data::new();
+    for i in 0..63 {
+        d.r[i] = 1;
+        d.g[i] = 3;
+        d.b[i] = 5;
+    }
 
-    // let mut sh = match SenseHat::new() {
-    //     Ok(v) => v,
-    //     Err(e) => panic!("{}", e.to_string()),
-    // };
+    let _ = match tx.send(d) {
+        Ok(v) => println!("{:?}", v),
+        Err(e) => println!("{:?}", e),
+    };
 
-    // sh.write_data(10).unwrap();
-    // sh.write_data(20).unwrap();
-    // sh.write_data(0).unwrap();
+    thread::sleep(Duration::from_millis(1000));
 
-    // sh.run().await;
 
     println!("Bye!");
 }

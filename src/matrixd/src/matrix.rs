@@ -1,5 +1,3 @@
-// https://dev.to/anilkhandei/mutable-arrays-in-rust-1k5o
-
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
@@ -16,9 +14,9 @@ const COLOR_DATA_LEN: usize = 64;
 
 #[derive(Debug)]
 pub struct Data {
-    r: [u8; COLOR_DATA_LEN],
-    g: [u8; COLOR_DATA_LEN],
-    b: [u8; COLOR_DATA_LEN],
+    pub r: [u8; COLOR_DATA_LEN],
+    pub g: [u8; COLOR_DATA_LEN],
+    pub b: [u8; COLOR_DATA_LEN],
 }
 
 impl Data {
@@ -70,25 +68,27 @@ impl SenseHat {
         })
     }
 
-    fn write_data(&mut self, mut data: Data) -> Result<usize, String> {
+    fn write_data(&mut self, data: Data) -> Result<usize, String> {
         // Iterate over the R channel (0..63)
         // buffer[ 1.. 9] <= r[0..8]
         // buffer[10..18] <= g[0..8]
         // buffer[19..27] <= b[0..8]
         // buffer[28..36] <= r[9..17]
- 
-        let index = 0;
+
+        let mut j;
+        // https://dev.to/anilkhandei/mutable-arrays-in-rust-1k5o
         for (i, _) in data.r.iter().enumerate() {
-            // usage of enumerate() : *v = 0; or i = *v
-            self.buffer[index + 1] = data.r[i];
-            self.buffer[index + 10] = data.g[i];
-            self.buffer[index + 19] = data.b[i];
+            j = (i / 8) * 8;
+            j = j * 2;
+            self.buffer[i + j + 1] = data.r[i] / 4;
+            self.buffer[i + j + 10] = data.g[i] / 4;
+            self.buffer[i + j + 19] = data.b[i] / 4;
         }
 
-        self.buffer[0] = 0;
-        self.buffer[1] = 63;
-        self.buffer[10] = 63;
-        self.buffer[19] = 63;
+        // self.buffer[0] = 0;
+        // self.buffer[1] = 63;
+        // self.buffer[10] = 63;
+        // self.buffer[19] = 63;
 
         match self.matrix.write(&self.buffer) {
             Ok(v) => Ok(v),
@@ -124,7 +124,7 @@ impl SenseHatRunner {
         // Clone RC
         let sh = self.sense_hat.clone();
         // Spawn
-        let handle = tokio::task::spawn(async move {
+        tokio::task::spawn(async move {
             // Lock
             let mut sh = sh.lock().await;
             // Loop
@@ -138,7 +138,8 @@ impl SenseHatRunner {
                     Err(e) => println!("{}", e),
                 }
             }
-        });
-        handle.await.unwrap();
+        })
+        .await
+        .unwrap();
     }
 }
