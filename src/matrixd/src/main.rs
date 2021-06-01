@@ -6,19 +6,33 @@
 
 mod matrix;
 
-use crate::matrix::SenseHat;
+use crate::matrix::{Data, SenseHatRunner};
 
-fn main() {
+#[tokio::main]
+async fn main() {
     println!("Hello, world!");
 
-    let mut sh = match SenseHat::new() {
+    let mut sh_runner = match SenseHatRunner::new() {
         Ok(v) => v,
         Err(e) => panic!("{}", e.to_string()),
     };
 
-    sh.write_data(10).unwrap();
-    sh.write_data(20).unwrap();
-    sh.write_data(0).unwrap();
+    let tx = sh_runner.get_tx().await;
+
+    sh_runner.run().await;
+
+    let d = matrix::Data::new();
+
+    // let mut sh = match SenseHat::new() {
+    //     Ok(v) => v,
+    //     Err(e) => panic!("{}", e.to_string()),
+    // };
+
+    // sh.write_data(10).unwrap();
+    // sh.write_data(20).unwrap();
+    // sh.write_data(0).unwrap();
+
+    // sh.run().await;
 
     println!("Bye!");
 }

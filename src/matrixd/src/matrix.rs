@@ -1,58 +1,144 @@
+// https://dev.to/anilkhandei/mutable-arrays-in-rust-1k5o
+
 use std::sync::Arc;
-use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
 
 use rppal::i2c::I2c;
 use rppal::system::DeviceInfo;
 
-const ADDR_MATRIX: u16 = 0x0046;
-const DATA_LEN: usize = 193;
+use crossbeam_channel::unbounded;
+use tokio::sync::Mutex;
 
-pub struct SenseHat {
-    matrix: Arc<Mutex<I2c>>,
+const ADDR_MATRIX: u16 = 0x0046;
+const I2C_DATA_LEN: usize = 193;
+const COLOR_DATA_LEN: usize = 64;
+
+#[derive(Debug)]
+pub struct Data {
+    r: [u8; COLOR_DATA_LEN],
+    g: [u8; COLOR_DATA_LEN],
+    b: [u8; COLOR_DATA_LEN],
+}
+
+impl Data {
+    pub fn new() -> Self {
+        Data {
+            r: [0; COLOR_DATA_LEN],
+            g: [0; COLOR_DATA_LEN],
+            b: [0; COLOR_DATA_LEN],
+        }
+    }
+}
+
+struct SenseHat {
+    matrix: I2c,
+    buffer: [u8; I2C_DATA_LEN],
+    tx: crossbeam_channel::Sender<Data>,
+    rx: crossbeam_channel::Receiver<Data>,
 }
 
 impl SenseHat {
     pub fn new() -> Result<SenseHat, String> {
+        // Check the platform
         let r = DeviceInfo::new();
         match r {
             Ok(v) => println!("{:?}", v),
             Err(e) => return Err(e.to_string()),
         };
-
+        // Get an I2C handler
         let r = I2c::new();
         let r = match r {
             Ok(v) => v,
             Err(e) => return Err(e.to_string()),
         };
-
+        // Set the I2C address
         let mut r = r;
         let s = r.set_slave_address(ADDR_MATRIX);
         match s {
             Ok(_) => (),
             Err(e) => return Err(e.to_string()),
         }
+        // Set channels
+        let (tx, rx) = unbounded();
 
-        let r = Arc::new(Mutex::new(r));
-
-        Ok(SenseHat { matrix: r })
+        Ok(SenseHat {
+            matrix: r,
+            buffer: [0; I2C_DATA_LEN],
+            tx,
+            rx,
+        })
     }
 
-    pub fn write_data(&mut self, level: u8) -> Result<usize, rppal::i2c::Error> {
-        let mut data: [u8; DATA_LEN] = [0; DATA_LEN];
-
-        thread::sleep(Duration::from_millis(100));
-
-        // https://dev.to/anilkhandei/mutable-arrays-in-rust-1k5o
-        for (_, v) in data.iter_mut().enumerate() {
-            *v = level;
+    fn write_data(&mut self, mut data: Data) -> Result<usize, String> {
+        // Iterate over the R channel (0..63)
+        // buffer[ 1.. 9] <= r[0..8]
+        // buffer[10..18] <= g[0..8]
+        // buffer[19..27] <= b[0..8]
+        // buffer[28..36] <= r[9..17]
+ 
+        let index = 0;
+        for (i, _) in data.r.iter().enumerate() {
+            // usage of enumerate() : *v = 0; or i = *v
+            self.buffer[index + 1] = data.r[i];
+            self.buffer[index + 10] = data.g[i];
+            self.buffer[index + 19] = data.b[i];
         }
-        data[0] = 0;
-        data[1] = 63;
-        data[10] = 63;
-        data[19] = 63;
-        let res = self.matrix.lock().unwrap().write(&data);
-        res
+
+        self.buffer[0] = 0;
+        self.buffer[1] = 63;
+        self.buffer[10] = 63;
+        self.buffer[19] = 63;
+
+        match self.matrix.write(&self.buffer) {
+            Ok(v) => Ok(v),
+            Err(e) => Err(e.to_string()),
+        }
+    }
+}
+
+pub struct SenseHatRunner {
+    sense_hat: Arc<Mutex<SenseHat>>,
+}
+
+impl SenseHatRunner {
+    pub fn new() -> Result<SenseHatRunner, String> {
+        //
+        let sh = match SenseHat::new() {
+            Ok(v) => v,
+            Err(e) => panic!("{}", e.to_string()),
+        };
+        //
+        Ok(SenseHatRunner {
+            sense_hat: Arc::new(Mutex::new(sh)),
+        })
+    }
+
+    pub async fn get_tx(&mut self) -> crossbeam_channel::Sender<Data> {
+        let sh = self.sense_hat.clone();
+        let sh = sh.lock().await;
+        sh.tx.clone()
+    }
+
+    pub async fn run(&mut self) {
+        // Clone RC
+        let sh = self.sense_hat.clone();
+        // Spawn
+        let handle = tokio::task::spawn(async move {
+            // Lock
+            let mut sh = sh.lock().await;
+            // Loop
+            loop {
+                let rv = sh.rx.recv();
+                match rv {
+                    Ok(v) => {
+                        let _ = sh.write_data(v);
+                        thread::sleep(Duration::from_millis(16));
+                    }
+                    Err(e) => println!("{}", e),
+                }
+            }
+        });
+        handle.await.unwrap();
     }
 }
