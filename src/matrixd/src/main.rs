@@ -13,13 +13,11 @@ use crate::matrix::SenseHat;
 fn main() {
     println!("Hello, world!");
 
-    let _ = SenseHat::new();
-    // let sh = match sh {
-    //     Ok(r) => r,
-    //     Err(e) => panic!("Error: {:?}", e),
-    // };
-
-    // sh.write_data(10);
+    let mut sh = SenseHat::new();
+    // sh.init();
+    sh.write_data(10);
+    sh.write_data(20);
+    sh.write_data(0);
 
     println!("Bye!");
 }
