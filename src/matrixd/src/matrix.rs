@@ -76,7 +76,6 @@ impl SenseHat {
         // buffer[28..36] <= r[9..17]
 
         let mut j = 0;
-        // https://dev.to/anilkhandei/mutable-arrays-in-rust-1k5o
         for (i, _) in data.r.iter().enumerate() {
             j = (i / 8) * 8;
             j = j * 2;
@@ -84,11 +83,6 @@ impl SenseHat {
             self.buffer[i + j + 9] = data.g[i];
             self.buffer[i + j + 17] = data.b[i];
         }
-
-        // self.buffer[0] = 0;
-        // self.buffer[1] = 63;
-        // self.buffer[10] = 63;
-        // self.buffer[19] = 63;
 
         match self.matrix.write(&self.buffer) {
             Ok(v) => Ok(v),
@@ -103,12 +97,12 @@ pub struct SenseHatRunner {
 
 impl SenseHatRunner {
     pub fn new() -> Result<SenseHatRunner, String> {
-        //
+        // Create a new SenseHat instance
         let sh = match SenseHat::new() {
             Ok(v) => v,
             Err(e) => panic!("{}", e.to_string()),
         };
-        //
+        // Wrap the instance with mutex, rc, and self
         Ok(SenseHatRunner {
             sense_hat: Arc::new(Mutex::new(sh)),
         })

@@ -21,7 +21,6 @@ async fn main() {
 
     let tx = sh_runner.get_tx().await;
 
-
     thread::sleep(Duration::from_millis(1000));
 
     let mut d = matrix::Data::new();
@@ -32,7 +31,7 @@ async fn main() {
     }
 
     let _ = match tx.send(d) {
-        Ok(v) => println!("{:?}", v),
+        Ok(_) => (),
         Err(e) => println!("{:?}", e),
     };
 
