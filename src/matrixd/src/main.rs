@@ -14,7 +14,6 @@ fn main() {
     println!("Hello, world!");
 
     let mut sh = SenseHat::new();
-    // sh.init();
     sh.write_data(10);
     sh.write_data(20);
     sh.write_data(0);

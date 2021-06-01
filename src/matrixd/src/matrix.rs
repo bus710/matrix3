@@ -39,16 +39,6 @@ impl SenseHat {
         SenseHat { matrix: r }
     }
 
-    pub fn init(&mut self) {
-        match self.matrix.lock() {
-            Ok(mut v) => match v.set_slave_address(ADDR_MATRIX) {
-                Ok(_) => (),
-                Err(_) => (),
-            },
-            Err(_) => (),
-        };
-    }
-
     pub fn write_data(&mut self, level: u8) -> Result<usize, rppal::i2c::Error> {
         let mut data: [u8; DATA_LEN] = [0; DATA_LEN];
 
