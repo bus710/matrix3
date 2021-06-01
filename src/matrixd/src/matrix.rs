@@ -10,13 +10,11 @@ const ADDR_MATRIX: u16 = 0x0046;
 const DATA_LEN: usize = 193;
 
 pub struct SenseHat<'a> {
-    // matrix: &'a mut I2c,
     matrix: Arc<Mutex<&'a mut I2c>>,
 }
 
 impl<'a> SenseHat<'a> {
-    // pub fn new() -> SenseHat<'a> {
-    pub fn new() -> Self {
+    pub fn new() -> SenseHat<'a> {
         let r = DeviceInfo::new();
         match r {
             Ok(v) => println!("Device Info: {:?}", v),
@@ -29,7 +27,11 @@ impl<'a> SenseHat<'a> {
             Err(_) => panic!(),
         };
 
-        r.set_slave_address(ADDR_MATRIX);
+        let s = r.set_slave_address(ADDR_MATRIX);
+        match s {
+            Ok(_) => (),
+            Err(_) => panic!(),
+        }
 
         SenseHat {
             matrix: Arc::new(Mutex::new(r)),
