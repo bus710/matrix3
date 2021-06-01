@@ -6,9 +6,9 @@
 
 mod matrix;
 
+use crate::matrix::SenseHatRunner;
 use std::thread;
 use std::time::Duration;
-use crate::matrix::{Data, SenseHatRunner};
 
 #[tokio::main]
 async fn main() {
@@ -21,13 +21,14 @@ async fn main() {
 
     let tx = sh_runner.get_tx().await;
 
-    sh_runner.run().await;
+
+    thread::sleep(Duration::from_millis(1000));
 
     let mut d = matrix::Data::new();
-    for i in 0..63 {
+    for i in 0..64 {
         d.r[i] = 1;
         d.g[i] = 3;
-        d.b[i] = 5;
+        d.b[i] = 10;
     }
 
     let _ = match tx.send(d) {
@@ -35,8 +36,8 @@ async fn main() {
         Err(e) => println!("{:?}", e),
     };
 
+    sh_runner.run().await;
     thread::sleep(Duration::from_millis(1000));
-
 
     println!("Bye!");
 }

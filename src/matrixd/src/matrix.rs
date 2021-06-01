@@ -75,14 +75,14 @@ impl SenseHat {
         // buffer[19..27] <= b[0..8]
         // buffer[28..36] <= r[9..17]
 
-        let mut j;
+        let mut j = 0;
         // https://dev.to/anilkhandei/mutable-arrays-in-rust-1k5o
         for (i, _) in data.r.iter().enumerate() {
             j = (i / 8) * 8;
             j = j * 2;
-            self.buffer[i + j + 1] = data.r[i] / 4;
-            self.buffer[i + j + 10] = data.g[i] / 4;
-            self.buffer[i + j + 19] = data.b[i] / 4;
+            self.buffer[i + j + 1] = data.r[i];
+            self.buffer[i + j + 9] = data.g[i];
+            self.buffer[i + j + 17] = data.b[i];
         }
 
         // self.buffer[0] = 0;
