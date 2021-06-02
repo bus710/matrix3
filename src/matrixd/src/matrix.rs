@@ -1,5 +1,4 @@
 use std::sync::Arc;
-use std::thread;
 
 use rppal::i2c::I2c;
 use rppal::system::DeviceInfo;

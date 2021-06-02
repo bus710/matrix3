@@ -16,13 +16,13 @@ async fn main() {
     let mut sh_runner = SenseHatRunner::new().unwrap();
     let tx = sh_runner.get_tx().await;
 
-    knocker(tx).await;
+    knocker_run(tx).await;
     sh_runner.run().await;
 
     println!("Bye!");
 }
 
-async fn knocker(tx: crossbeam_channel::Sender<matrix::Data>) {
+async fn knocker_run(tx: crossbeam_channel::Sender<matrix::Data>) {
     tokio::task::spawn(async move {
         let tx = tx;
 
