@@ -30,16 +30,18 @@ async fn async_knocker_run(tx: crossbeam_channel::Sender<matrix::Data>) {
         let tx = tx;
 
         loop {
-            println!("knocker");
-            let mut d = matrix::Data::new();
-            for i in 0..64 {
-                d.r[i] = rand::random();
-                d.g[i] = rand::random();
-                d.b[i] = rand::random();
+            crossbeam_channel::select! {
+                default(Duration::from_millis(2000)) => {
+                    println!("async_knocker");
+                    let mut d = matrix::Data::new();
+                    for i in 0..64 {
+                        d.r[i] = rand::random();
+                        d.g[i] = rand::random();
+                        d.b[i] = rand::random();
+                    }
+                    tx.send(d).unwrap();
+                },
             }
-
-            tx.send(d).unwrap();
-            sleep(Duration::from_millis(2000)).await;
         }
     });
 }
