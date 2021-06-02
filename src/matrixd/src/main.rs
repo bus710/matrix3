@@ -8,7 +8,7 @@ mod matrix;
 
 use crate::matrix::SenseHatRunner;
 use std::thread;
-use tokio::time::{sleep, Duration};
+use tokio::time::Duration;
 
 #[tokio::main]
 async fn main() {
