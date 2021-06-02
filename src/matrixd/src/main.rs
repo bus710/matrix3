@@ -18,14 +18,14 @@ async fn main() {
     let tx = sh_runner.get_tx().await;
     let tx2 = sh_runner.get_tx().await;
 
-    knocker_run(tx).await;
+    async_knocker_run(tx).await;
     sync_knocker_run(tx2);
     sh_runner.run().await;
 
     println!("Bye!");
 }
 
-async fn knocker_run(tx: crossbeam_channel::Sender<matrix::Data>) {
+async fn async_knocker_run(tx: crossbeam_channel::Sender<matrix::Data>) {
     tokio::task::spawn(async move {
         let tx = tx;
 
