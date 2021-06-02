@@ -1,3 +1,4 @@
+
 use std::sync::Arc;
 
 use rppal::i2c::I2c;
@@ -5,7 +6,7 @@ use rppal::system::DeviceInfo;
 
 use crossbeam_channel::unbounded;
 use tokio::sync::Mutex;
-use tokio::time::{sleep, Duration};
+use tokio::time::Duration;
 
 const ADDR_MATRIX: u16 = 0x0046;
 const I2C_DATA_LEN: usize = 193;
