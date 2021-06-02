@@ -33,10 +33,11 @@ struct SenseHat {
     buffer: [u8; I2C_DATA_LEN],
     tx: crossbeam_channel::Sender<Data>,
     rx: crossbeam_channel::Receiver<Data>,
+    signal_rx: crossbeam_channel::Receiver<()>,
 }
 
 impl SenseHat {
-    pub fn new() -> Result<SenseHat, String> {
+    pub fn new(signal_rx: crossbeam_channel::Receiver<()>) -> Result<SenseHat, String> {
         // Check the platform
         let r = DeviceInfo::new();
         match r {
@@ -64,6 +65,7 @@ impl SenseHat {
             buffer: [0; I2C_DATA_LEN],
             tx,
             rx,
+            signal_rx,
         })
     }
 
@@ -77,7 +79,7 @@ impl SenseHat {
         for (i, _) in data.r.iter().enumerate() {
             j = (i / 8) * 8;
             j = j * 2;
-            self.buffer[i + j + 1] = data.r[i] / 30 ;
+            self.buffer[i + j + 1] = data.r[i] / 30;
             self.buffer[i + j + 9] = data.g[i] / 20;
             self.buffer[i + j + 17] = data.b[i] / 30;
         }
@@ -94,9 +96,9 @@ pub struct SenseHatRunner {
 }
 
 impl SenseHatRunner {
-    pub fn new() -> Result<SenseHatRunner, String> {
+    pub fn new(signal_rx: crossbeam_channel::Receiver<()>) -> Result<SenseHatRunner, String> {
         // Create a new SenseHat instance
-        let sh = match SenseHat::new() {
+        let sh = match SenseHat::new(signal_rx) {
             Ok(v) => v,
             Err(e) => panic!("{}", e.to_string()),
         };
@@ -119,16 +121,20 @@ impl SenseHatRunner {
         tokio::task::spawn(async move {
             // Lock
             let mut sh = sh.lock().await;
+            let ticks = crossbeam_channel::tick(Duration::from_secs(1));
             // Loop
             loop {
                 println!("runner");
-                let rv = sh.rx.recv();
-                match rv {
-                    Ok(v) => {
-                        let _ = sh.write_data(v);
-                        sleep(Duration::from_millis(16)).await;
-                    }
-                    Err(e) => println!("{}", e),
+                crossbeam_channel::select! {
+                    recv(sh.rx) -> v => {
+                        match v {
+                            Ok(v) => {sh.write_data(v).unwrap();},
+                            Err(_) => (),
+                        };
+                    },
+                    recv(sh.signal_rx) -> _ => break,
+                    // recv(ticks) -> _ => {},
+                    // default => (),
                 }
             }
         })
