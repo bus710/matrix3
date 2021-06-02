@@ -7,6 +7,7 @@
 mod matrix;
 
 use crate::matrix::SenseHatRunner;
+use std::thread;
 use tokio::time::{sleep, Duration};
 
 #[tokio::main]
@@ -15,8 +16,10 @@ async fn main() {
 
     let mut sh_runner = SenseHatRunner::new().unwrap();
     let tx = sh_runner.get_tx().await;
+    let tx2 = sh_runner.get_tx().await;
 
     knocker_run(tx).await;
+    sync_knocker_run(tx2);
     sh_runner.run().await;
 
     println!("Bye!");
@@ -36,7 +39,25 @@ async fn knocker_run(tx: crossbeam_channel::Sender<matrix::Data>) {
             }
 
             tx.send(d).unwrap();
-            sleep(Duration::from_millis(1000)).await;
+            sleep(Duration::from_millis(2000)).await;
+        }
+    });
+}
+
+fn sync_knocker_run(tx: crossbeam_channel::Sender<matrix::Data>) {
+    thread::spawn(move || {
+        let tx = tx;
+        loop {
+            println!("sync_knocker");
+            let mut d = matrix::Data::new();
+            for i in 0..64 {
+                d.r[i] = rand::random();
+                d.g[i] = rand::random();
+                d.b[i] = rand::random();
+            }
+
+            tx.send(d).unwrap();
+            thread::sleep(Duration::from_millis(1100));
         }
     });
 }
