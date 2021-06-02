@@ -1,12 +1,12 @@
 use std::sync::Arc;
 use std::thread;
-use std::time::Duration;
 
 use rppal::i2c::I2c;
 use rppal::system::DeviceInfo;
 
 use crossbeam_channel::unbounded;
 use tokio::sync::Mutex;
+use tokio::time::{sleep, Duration};
 
 const ADDR_MATRIX: u16 = 0x0046;
 const I2C_DATA_LEN: usize = 193;
@@ -74,14 +74,13 @@ impl SenseHat {
         // buffer[10..18] <= g[0..8]
         // buffer[19..27] <= b[0..8]
         // buffer[28..36] <= r[9..17]
-
         let mut j = 0;
         for (i, _) in data.r.iter().enumerate() {
             j = (i / 8) * 8;
             j = j * 2;
-            self.buffer[i + j + 1] = data.r[i];
-            self.buffer[i + j + 9] = data.g[i];
-            self.buffer[i + j + 17] = data.b[i];
+            self.buffer[i + j + 1] = data.r[i] / 30 ;
+            self.buffer[i + j + 9] = data.g[i] / 20;
+            self.buffer[i + j + 17] = data.b[i] / 30;
         }
 
         match self.matrix.write(&self.buffer) {
@@ -123,11 +122,12 @@ impl SenseHatRunner {
             let mut sh = sh.lock().await;
             // Loop
             loop {
+                println!("runner");
                 let rv = sh.rx.recv();
                 match rv {
                     Ok(v) => {
                         let _ = sh.write_data(v);
-                        thread::sleep(Duration::from_millis(16));
+                        sleep(Duration::from_millis(16)).await;
                     }
                     Err(e) => println!("{}", e),
                 }
