@@ -1,16 +1,16 @@
 [package]
-name = "matrixd"
-version = "0.1.0"
 authors = ["bus710 <bus710@gmail.com>"]
 edition = "2018"
+name = "matrixd"
+version = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 crossbeam-channel = "0.5.1"
-futures = "0.3.9"
-tokio = {version = "1.6.1", features = ["full"]}
-warp = "0.3.1"
-rppal = "0.12.0"
-rand = "0.8.3"
 ctrlc = "3.1.9"
+futures = "0.3.9"
+rand = "0.8.3"
+rppal = "0.12.0"
+tokio = {version = "1.6.1", features = ["full"]}
+rocket = "0.4.10"

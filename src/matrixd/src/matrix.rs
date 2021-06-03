@@ -140,8 +140,6 @@ impl SenseHatRunner {
                     // default => (),
                 }
             }
-        })
-        .await
-        .unwrap();
+        });
     }
 }

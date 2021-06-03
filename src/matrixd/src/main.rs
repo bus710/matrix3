@@ -1,12 +1,12 @@
-// https://github.com/bus710/matrix2/blob/master/src/back/mainSenseHat.go
-// https://github.com/golemparts/rppal
-// https://github.com/golemparts/rppal/blob/master/examples/i2c_ds3231.rs
-// https://www.raspberrypi.org/documentation/hardware/sense-hat/README.md
-// https://pinout.xyz/pinout/sense_hat
+#![feature(proc_macro_hygiene, decl_macro)]
+
+#[macro_use]
+extern crate rocket;
 
 mod catcher; // has signal catcher code
 mod matrix; // has sense hat matrix driver codes
 mod senders; // has test codes
+mod server;
 
 use catcher::*;
 use matrix::*;
@@ -24,6 +24,8 @@ async fn main() {
 
     async_knocker_run(matrix_tx.clone(), signal_rx.clone()).await;
     sh_runner.run().await;
+
+    server::run();
 
     println!("End matrix service");
 }
