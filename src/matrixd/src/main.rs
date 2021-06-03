@@ -7,9 +7,11 @@
 mod matrix; // has sense hat matrix driver codes
 mod catcher; // has signal catcher code
 mod senders; // has test codes 
+mod server; // has webserver code
 
 use matrix::*;
 use catcher::*;
+use server::*;
 
 #[tokio::main]
 async fn main() {
@@ -17,10 +19,13 @@ async fn main() {
 
     let signal_rx = signal_catcher().unwrap();
 
-    let mut sh_runner = SenseHatRunner::new(signal_rx.clone()).unwrap();
-    let matrix_tx = sh_runner.get_tx().await;
+    let mut sensehat_runner = SenseHatRunner::new(signal_rx.clone()).unwrap();
+    let matrix_tx = sensehat_runner.get_matrix_tx().await;
 
-    sh_runner.run().await;
+    let server_runner= Server::new(matrix_tx.clone(), signal_rx.clone()).unwrap();
+
+    sensehat_runner.run().await;
+    server_runner.run().await;
 
     println!("End matrix service");
 }
