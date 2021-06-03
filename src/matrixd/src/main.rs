@@ -7,7 +7,7 @@
 mod matrix;
 mod senders;
 
-use matrix::SenseHatRunner;
+use matrix::*;
 use senders::*;
 
 #[tokio::main]
