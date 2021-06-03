@@ -1,8 +1,3 @@
-#![feature(proc_macro_hygiene, decl_macro)]
-
-#[macro_use]
-extern crate rocket;
-
 mod catcher; // has signal catcher code
 mod matrix; // has sense hat matrix driver codes
 mod senders; // has test codes
