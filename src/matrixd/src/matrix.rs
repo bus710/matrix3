@@ -132,7 +132,11 @@ impl SenseHatRunner {
                             Err(_) => (),
                         };
                     },
-                    recv(sh.signal_rx) -> _ => break,
+                    recv(sh.signal_rx) -> _ => {
+                        let d = Data::new();
+                        sh.write_data(d).unwrap();
+                        break
+                    },
                     // recv(ticks) -> _ => {},
                     // default => (),
                 }
