@@ -13,7 +13,7 @@ pub async fn async_knocker_run(
         loop {
             crossbeam_channel::select! {
                 recv(rx) -> _ => break,
-                default(Duration::from_millis(2000)) => {
+                default(Duration::from_millis(500)) => {
                     println!("async_knocker");
                     let mut d = matrix::Data::new();
                     for i in 0..64 {
@@ -28,6 +28,7 @@ pub async fn async_knocker_run(
     });
 }
 
+#[allow(dead_code)]
 pub fn sync_knocker_run(
     tx: crossbeam_channel::Sender<matrix::Data>,
     signal_rx: crossbeam_channel::Receiver<()>,

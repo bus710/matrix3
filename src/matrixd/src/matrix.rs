@@ -5,7 +5,6 @@ use rppal::system::DeviceInfo;
 
 use crossbeam_channel::unbounded;
 use tokio::sync::Mutex;
-use tokio::time::Duration;
 
 const ADDR_MATRIX: u16 = 0x0046;
 const I2C_DATA_LEN: usize = 193;
@@ -75,13 +74,13 @@ impl SenseHat {
         // buffer[10..18] <= g[0..8]
         // buffer[19..27] <= b[0..8]
         // buffer[28..36] <= r[9..17]
-        let mut j = 0;
+        let mut _j = 0;
         for (i, _) in data.r.iter().enumerate() {
-            j = (i / 8) * 8;
-            j = j * 2;
-            self.buffer[i + j + 1] = data.r[i] / 30;
-            self.buffer[i + j + 9] = data.g[i] / 20;
-            self.buffer[i + j + 17] = data.b[i] / 30;
+            _j = (i / 8) * 8;
+            _j = _j * 2;
+            self.buffer[i + _j + 1] = data.r[i] / 30;
+            self.buffer[i + _j + 9] = data.g[i] / 20;
+            self.buffer[i + _j + 17] = data.b[i] / 30;
         }
 
         match self.matrix.write(&self.buffer) {
@@ -121,7 +120,7 @@ impl SenseHatRunner {
         tokio::task::spawn(async move {
             // Lock
             let mut sh = sh.lock().await;
-            let ticks = crossbeam_channel::tick(Duration::from_secs(1));
+            // let ticks = crossbeam_channel::tick(Duration::from_secs(1));
             // Loop
             loop {
                 println!("runner");
