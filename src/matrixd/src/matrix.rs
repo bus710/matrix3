@@ -107,7 +107,7 @@ impl SenseHatRunner {
         })
     }
 
-    pub async fn get_tx(&mut self) -> crossbeam_channel::Sender<Data> {
+    pub async fn get_matrix_tx(&mut self) -> crossbeam_channel::Sender<Data> {
         let sh = self.sense_hat.clone();
         let sh = sh.lock().await;
         sh.tx.clone()

@@ -3,6 +3,7 @@ use crate::matrix;
 use std::thread;
 use tokio::time::Duration;
 
+#[allow(dead_code)]
 pub async fn async_knocker_run(
     tx: crossbeam_channel::Sender<matrix::Data>,
     signal_rx: crossbeam_channel::Receiver<()>,
