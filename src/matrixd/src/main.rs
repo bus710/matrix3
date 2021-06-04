@@ -20,7 +20,7 @@ async fn main() {
     async_knocker_run(matrix_tx.clone(), signal_rx.clone()).await;
     sh_runner.run().await;
 
-    server::run();
+    server::run(matrix_tx.clone(), signal_rx.clone()).await;
 
     println!("End matrix service");
 }
