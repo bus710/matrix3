@@ -2,9 +2,9 @@
 
 set -e
 
-echo "hello"
+echo "script - hello"
 
-curl -v --location --request POST 'localhost:8080/v1/data/a' \
+curl --location '127.0.0.1:8080/v1/data' \
 --header 'Content-Type: application/json' \
 --header 'Content-Type: text/plain' \
 --data-raw '{
@@ -16,4 +16,5 @@ curl -v --location --request POST 'localhost:8080/v1/data/a' \
     "b1": [0, 0, 0]
 }'
 
-echo "bye"
+echo
+echo "script - bye"
