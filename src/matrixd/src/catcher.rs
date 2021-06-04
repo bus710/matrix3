@@ -6,6 +6,9 @@ pub async fn signal_catcher() -> Result<crossbeam_channel::Receiver<()>, ctrlc::
     let (signal_tx, signal_rx) = unbounded();
     tokio::task::spawn(async move {
         signal::ctrl_c().await.expect("");
+        println!(" - got interrupt");
+        let _ = signal_tx.send(());
+        let _ = signal_tx.send(());
         let _ = signal_tx.send(());
     });
     // ctrlc::set_handler(move || {

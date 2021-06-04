@@ -30,4 +30,4 @@ In HOME/.config/Code/User/settings.json:
 - https://github.com/golemparts/rppal/blob/master/examples/i2c_ds3231.rs
 - https://www.raspberrypi.org/documentation/hardware/sense-hat/README.md
 - https://pinout.xyz/pinout/sense_hat
-
+- https://blog.logrocket.com/creating-a-rest-api-in-rust-with-warp/

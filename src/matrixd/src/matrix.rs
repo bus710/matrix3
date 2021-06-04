@@ -10,7 +10,6 @@ const ADDR_MATRIX: u16 = 0x0046;
 const I2C_DATA_LEN: usize = 193;
 const COLOR_DATA_LEN: usize = 64;
 
-#[derive(Debug)]
 pub struct Data {
     pub r: [u8; COLOR_DATA_LEN],
     pub g: [u8; COLOR_DATA_LEN],
