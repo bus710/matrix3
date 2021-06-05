@@ -69,10 +69,10 @@ impl SenseHat {
 
     fn write_data(&mut self, data: Data) -> Result<usize, String> {
         // Iterate over the R channel (0..63)
-        // buffer[ 1.. 9] <= r[0..8]
-        // buffer[10..18] <= g[0..8]
-        // buffer[19..27] <= b[0..8]
-        // buffer[28..36] <= r[9..17]
+        // - buffer[ 1.. 9] <= r[0..8]
+        // - buffer[10..18] <= g[0..8]
+        // - buffer[19..27] <= b[0..8]
+        // - buffer[28..36] <= r[9..17]
         let mut _j = 0;
         for (i, _) in data.r.iter().enumerate() {
             _j = (i / 8) * 8;
@@ -119,10 +119,8 @@ impl SenseHatRunner {
         tokio::task::spawn(async move {
             // Lock
             let mut sh = sh.lock().await;
-            // let ticks = crossbeam_channel::tick(Duration::from_secs(1));
             // Loop
             loop {
-                println!("runner");
                 crossbeam_channel::select! {
                     recv(sh.rx) -> v => {
                         match v {
@@ -135,8 +133,6 @@ impl SenseHatRunner {
                         sh.write_data(d).unwrap();
                         break
                     },
-                    // recv(ticks) -> _ => {},
-                    // default => (),
                 }
             }
         });

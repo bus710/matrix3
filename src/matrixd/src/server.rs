@@ -31,9 +31,6 @@ pub async fn matrix_handler(
         d.r[i] = rng.gen_range(0..=63);
         d.g[i] = rng.gen_range(0..=63);
         d.b[i] = rng.gen_range(0..=63);
-        // d.r[i] = rand::random();
-        // d.g[i] = rand::random();
-        // d.b[i] = rand::random();
     }
     matrix_tx.send(d).unwrap();
 
