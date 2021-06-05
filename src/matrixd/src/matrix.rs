@@ -67,8 +67,13 @@ impl SenseHat {
         })
     }
 
-    fn write_data(&mut self, data: Data) -> Result<usize, String> {
-        // Iterate over the R channel (0..63)
+    fn write_data(&mut self, mut data: Data) -> Result<usize, String> {
+        // Normalize
+        data.r.iter_mut().find(|&&mut v| v > 64).map(|_v| 63);
+        data.g.iter_mut().find(|&&mut v| v > 64).map(|_v| 63);
+        data.b.iter_mut().find(|&&mut v| v > 64).map(|_v| 63);
+
+        // Map from 64*3 to R8/G8/B8 order
         // - buffer[ 1.. 9] <= r[0..8]
         // - buffer[10..18] <= g[0..8]
         // - buffer[19..27] <= b[0..8]
