@@ -77,9 +77,9 @@ impl SenseHat {
         for (i, _) in data.r.iter().enumerate() {
             _j = (i / 8) * 8;
             _j = _j * 2;
-            self.buffer[i + _j + 1] = data.r[i] / 30;
-            self.buffer[i + _j + 9] = data.g[i] / 20;
-            self.buffer[i + _j + 17] = data.b[i] / 30;
+            self.buffer[i + _j + 1] = data.r[i];
+            self.buffer[i + _j + 9] = data.g[i];
+            self.buffer[i + _j + 17] = data.b[i];
         }
 
         match self.matrix.write(&self.buffer) {
