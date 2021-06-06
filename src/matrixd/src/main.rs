@@ -1,27 +1,38 @@
 mod catcher; // has signal catcher code
-mod matrix; // has sense hat matrix driver codes
-mod senders; // has test codes
+mod channels; // has channel prep code
+mod matrix; // has sense hat matrix driver code
+mod senders; // has test code
 mod server;
 
 use catcher::*;
+use channels::*;
+use futures::future;
 use matrix::*;
 
 #[tokio::main]
 async fn main() {
     println!("Start matrix service");
 
-    // Create a catcher handler and get some receivers for graceful shutdown
-    let (signal_rx, server_rx) = signal_catcher().await.unwrap();
+    // Create channels
+    let (signal_tx, signal_rx, matrix_tx, matrix_rx, server_tx, server_rx) =
+        get_channels().unwrap();
 
-    // Create a sense hat runner
-    // Give it a signal receiver and take a matrix data server
-    let mut sensehat_runner = SenseHatRunner::new(signal_rx.clone()).unwrap();
-    let matrix_tx = sensehat_runner.get_matrix_tx().await;
-    // Run the matrix thread
-    sensehat_runner.run().await;
+    // Create and run catcher handler
+    let signal_catcher_handle = signal_catcher(signal_tx.clone(), server_tx.clone()).await;
 
-    // Run the webserver
-    server::run(matrix_tx.clone(), server_rx).await;
+    // Create and run SenseHat runner
+    let mut sensehat_runner = SenseHatRunner::new(signal_rx.clone(), matrix_rx.clone()).unwrap();
+    let sensehat_runner_handle = sensehat_runner.run().await;
+
+    // Create and run webserver
+    let server_handle = server::run(matrix_tx.clone(), server_rx).await;
+
+    let handles = vec![
+        signal_catcher_handle.unwrap(),
+        sensehat_runner_handle.unwrap(),
+        server_handle.unwrap(),
+    ];
+    future::join_all(handles).await;
 
     println!("End matrix service");
 }

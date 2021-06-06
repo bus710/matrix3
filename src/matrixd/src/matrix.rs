@@ -2,8 +2,6 @@ use std::sync::Arc;
 
 use rppal::i2c::I2c;
 use rppal::system::DeviceInfo;
-
-use crossbeam_channel::unbounded;
 use tokio::sync::Mutex;
 
 const ADDR_MATRIX: u16 = 0x0046;
@@ -29,13 +27,15 @@ impl Data {
 struct SenseHat {
     matrix: I2c,
     buffer: [u8; I2C_DATA_LEN],
-    tx: crossbeam_channel::Sender<Data>,
-    rx: crossbeam_channel::Receiver<Data>,
+    matrix_rx: crossbeam_channel::Receiver<Data>,
     signal_rx: crossbeam_channel::Receiver<()>,
 }
 
 impl SenseHat {
-    pub fn new(signal_rx: crossbeam_channel::Receiver<()>) -> Result<SenseHat, String> {
+    pub fn new(
+        signal_rx: crossbeam_channel::Receiver<()>,
+        matrix_rx: crossbeam_channel::Receiver<Data>,
+    ) -> Result<SenseHat, String> {
         // Check the platform
         let r = DeviceInfo::new();
         match r {
@@ -55,14 +55,10 @@ impl SenseHat {
             Ok(_) => (),
             Err(e) => return Err(e.to_string()),
         }
-        // Set channels
-        let (tx, rx) = unbounded();
-
         Ok(SenseHat {
             matrix: r,
             buffer: [0; I2C_DATA_LEN],
-            tx,
-            rx,
+            matrix_rx,
             signal_rx,
         })
     }
@@ -99,9 +95,12 @@ pub struct SenseHatRunner {
 }
 
 impl SenseHatRunner {
-    pub fn new(signal_rx: crossbeam_channel::Receiver<()>) -> Result<SenseHatRunner, String> {
+    pub fn new(
+        signal_rx: crossbeam_channel::Receiver<()>,
+        matrix_rx: crossbeam_channel::Receiver<Data>,
+    ) -> Result<SenseHatRunner, String> {
         // Create a new SenseHat instance
-        let sh = match SenseHat::new(signal_rx) {
+        let sh = match SenseHat::new(signal_rx, matrix_rx) {
             Ok(v) => v,
             Err(e) => panic!("{}", e.to_string()),
         };
@@ -111,23 +110,25 @@ impl SenseHatRunner {
         })
     }
 
-    pub async fn get_matrix_tx(&mut self) -> crossbeam_channel::Sender<Data> {
-        let sh = self.sense_hat.clone();
-        let sh = sh.lock().await;
-        sh.tx.clone()
-    }
+    // pub async fn get_matrix_tx(&mut self) -> crossbeam_channel::Sender<Data> {
+    //     let sh = self.sense_hat.clone();
+    //     let sh = sh.lock().await;
+    //     sh.tx.clone()
+    // }
 
-    pub async fn run(&mut self) {
+    pub async fn run(&mut self) 
+    -> Result<tokio::task::JoinHandle<()>, String> {
         // Clone RC
         let sh = self.sense_hat.clone();
         // Spawn
+        let handle = 
         tokio::task::spawn(async move {
             // Lock
             let mut sh = sh.lock().await;
             // Loop
             loop {
                 crossbeam_channel::select! {
-                    recv(sh.rx) -> v => {
+                    recv(sh.matrix_rx) -> v => {
                         match v {
                             Ok(v) => {sh.write_data(v).unwrap();},
                             Err(_) => (),
@@ -141,5 +142,6 @@ impl SenseHatRunner {
                 }
             }
         });
+        Ok(handle)
     }
 }

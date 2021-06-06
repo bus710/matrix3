@@ -86,8 +86,9 @@ pub async fn random_handler(
 
 pub async fn run(
     matrix_tx: crossbeam_channel::Sender<matrix::Data>,
-    mut server_rx: mpsc::Receiver<()>,
-) {
+    mut server_rx: mpsc::UnboundedReceiver<()>,
+    // ) {
+) -> Result<tokio::task::JoinHandle<()>, String> {
     let matrix_tx_filter = warp::any().map(move || matrix_tx.clone());
     let body_size_filter = warp::body::content_length_limit(1024 * 32).and(warp::body::json());
 
@@ -117,9 +118,12 @@ pub async fn run(
 
     let (addr, server) =
         warp::serve(routes).bind_with_graceful_shutdown(([0, 0, 0, 0], 8080), async move {
-            server_rx.recv().await;
+            let _ = server_rx.recv().await.unwrap();
         });
 
     println!("Server is running at {}", addr);
-    tokio::task::spawn(server).await.unwrap();
+
+    let handle = tokio::task::spawn(server);
+
+    Ok(handle)
 }
