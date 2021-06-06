@@ -27,6 +27,7 @@ async fn main() {
     // Create and run webserver
     let server_handle = server::run(matrix_tx.clone(), server_rx).await;
 
+    // Wait for threads
     let handles = vec![
         signal_catcher_handle.unwrap(),
         sensehat_runner_handle.unwrap(),
