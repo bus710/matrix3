@@ -2,16 +2,23 @@ mod catcher; // has signal catcher code
 mod channels; // has channel prep code
 mod matrix; // has sense hat matrix driver code
 mod senders; // has test code
-mod server;
+mod server; // has web server code
 
 use catcher::*;
 use channels::*;
 use futures::future;
 use matrix::*;
 
+extern crate pretty_env_logger;
+#[macro_use]
+extern crate log;
+
 #[tokio::main]
 async fn main() {
-    println!("Start matrix service");
+    info!("Start matrix service");
+
+    // Init logger
+    pretty_env_logger::init();
 
     // Create channels
     let (signal_tx, signal_rx, matrix_tx, matrix_rx, ws_tx, ws_rx, server_tx, server_rx) =
@@ -22,7 +29,7 @@ async fn main() {
 
     // Create and run SenseHat runner
     let mut sensehat_runner =
-        SenseHatRunner::new(matrix_rx.clone(), ws_tx.clone(), signal_rx.clone() ).unwrap();
+        SenseHatRunner::new(matrix_rx.clone(), ws_tx.clone(), signal_rx.clone()).unwrap();
     let sensehat_runner_handle = sensehat_runner.run().await;
 
     // Create and run webserver
@@ -36,5 +43,5 @@ async fn main() {
     ];
     future::join_all(handles).await;
 
-    println!("End matrix service");
+    info!("End matrix service");
 }

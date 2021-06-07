@@ -9,3 +9,9 @@
 - https://pinout.xyz/pinout/sense_hat
 - https://blog.logrocket.com/creating-a-rest-api-in-rust-with-warp/
 - https://github.com/zupzup/warp-websockets-example
+
+## Run in terminal
+
+```sh
+$ RUST_BACKTRACE=1 RUST_LOG={info|debug|trace} cargo run 
+```

@@ -8,7 +8,7 @@ const ADDR_MATRIX: u16 = 0x0046;
 const I2C_DATA_LEN: usize = 193;
 const COLOR_DATA_LEN: usize = 64;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Data {
     pub r: [u8; COLOR_DATA_LEN],
     pub g: [u8; COLOR_DATA_LEN],
@@ -42,7 +42,7 @@ impl SenseHat {
         // Check the platform
         let r = DeviceInfo::new();
         match r {
-            Ok(v) => println!("{:?}", v),
+            Ok(v) => info!("{:?}", v),
             Err(e) => return Err(e.to_string()),
         };
         // Get an I2C handler
@@ -135,6 +135,7 @@ impl SenseHatRunner {
                         match v {
                             Ok(v) => {
                                 let _ = sh.write_data(v.clone()).unwrap();
+                                info!("{:?}", v);
                                 let _ = sh.ws_tx.send(v);
                             },
                             Err(_) => (),

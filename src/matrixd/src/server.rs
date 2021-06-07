@@ -1,6 +1,8 @@
+use std::time::Duration;
+
 use crate::matrix;
 use futures::SinkExt;
-use futures::{FutureExt, StreamExt};
+use futures::StreamExt;
 use rand::{self, Rng};
 use serde_derive::{Deserialize, Serialize};
 use tokio::sync::mpsc;
@@ -35,7 +37,7 @@ impl Data {
 
 // Returns pong when /v1/ping gets hit
 async fn pong_handler() -> Result<impl warp::Reply, warp::Rejection> {
-    println!("pong");
+    info!("pong");
     Ok(warp::reply::with_status("pong ", http::StatusCode::OK))
 }
 
@@ -44,6 +46,7 @@ async fn matrix_handler(
     d: Data,
     matrix_tx: crossbeam_channel::Sender<matrix::Data>,
 ) -> Result<impl warp::Reply, warp::Rejection> {
+    info!("matrix");
     // Check data lengths
     let mut len_vec = Vec::new();
     len_vec.push(d.r0.len());
@@ -86,6 +89,7 @@ async fn matrix_handler(
 async fn random_handler(
     matrix_tx: crossbeam_channel::Sender<matrix::Data>,
 ) -> Result<impl warp::Reply, warp::Rejection> {
+    info!("random");
     // Create a buffer to match the channel
     let mut d2 = matrix::Data::new();
     // Randomize
@@ -106,9 +110,17 @@ async fn ws_handler(
     ws: warp::ws::Ws,
     ws_rx: crossbeam_channel::Receiver<matrix::Data>,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    //
-    ws.on_upgrade(|websocket| {
-        let (tx, rx) = websocket.split();
+    info!("ws");
+    ws.on_upgrade(move |websocket| ws_connected(websocket, ws_rx));
+
+    tokio::time::sleep(Duration::from_millis(10000)).await;
+    Ok(warp::reply::with_status("", http::StatusCode::OK))
+}
+
+async fn ws_connected(websocket: WebSocket, ws_rx: crossbeam_channel::Receiver<matrix::Data>) {
+    info!("connected");
+    let (mut tx, mut rx) = websocket.split();
+    tokio::task::spawn(async move {
         loop {
             let d = ws_rx.recv().unwrap();
             // Create a buffer to match the channel
@@ -123,11 +135,21 @@ async fn ws_handler(
                 d2.b1[i] = d.b[i + 32];
             }
             let v = serde_json::to_string(&d2).unwrap();
-            tx.send(Message::text(v));
+            info!("{:?}", v);
+            let _ = tx.send(Message::text(v)).await;
         }
     });
 
-    Ok(warp::reply::with_status("", http::StatusCode::OK))
+    while let Some(result) = rx.next().await {
+        let msg = match result {
+            Ok(msg) => msg,
+            Err(e) => {
+                info!("{:?}", e.to_string());
+                break;
+            }
+        };
+        info!("{:?}", msg);
+    }
 }
 
 pub async fn run(
@@ -136,8 +158,8 @@ pub async fn run(
     mut server_rx: mpsc::UnboundedReceiver<()>,
 ) -> Result<tokio::task::JoinHandle<()>, String> {
     // Create filters
-    let matrix_tx_filter = warp::any().map(move || matrix_tx.clone());
-    let ws_rx_filter = warp::any().map(move || ws_rx.clone());
+    let with_matrix_tx = warp::any().map(move || matrix_tx.clone());
+    let with_ws_rx = warp::any().map(move || ws_rx.clone());
     let body_size_filter = warp::body::content_length_limit(1024 * 32).and(warp::body::json());
 
     // Create routes
@@ -152,25 +174,24 @@ pub async fn run(
         .and(warp::path("matrix"))
         .and(body_size_filter)
         .and(warp::path::end())
-        .and(matrix_tx_filter.clone())
+        .and(with_matrix_tx.clone())
         .and_then(matrix_handler);
 
     let random_route = warp::any()
         .and(warp::path("v1"))
         .and(warp::path("random"))
         .and(warp::path::end())
-        .and(matrix_tx_filter.clone())
+        .and(with_matrix_tx.clone())
         .and_then(random_handler);
 
-    let ws_route = warp::any()
-        .and(warp::path("v1"))
+    let ws_route = warp::path("v1")
         .and(warp::path("ws"))
         .and(warp::path::end())
         .and(warp::ws())
-        .and(ws_rx_filter.clone())
+        .and(with_ws_rx.clone())
         .and_then(ws_handler);
 
-    // Conbine routes and add CORS rule
+    // Combine routes and add CORS rule
     let routes = ping_route.or(matrix_route).or(random_route).or(ws_route);
     let routes = routes.with(warp::cors().allow_any_origin());
 
@@ -179,7 +200,7 @@ pub async fn run(
             let _ = server_rx.recv().await.unwrap();
         });
 
-    println!("Server is running at {}", addr);
+    info!("Server is running at {}", addr);
 
     let handle = tokio::task::spawn(server);
 

@@ -10,7 +10,7 @@ pub async fn signal_catcher(
 ) -> Result<tokio::task::JoinHandle<()>, ctrlc::Error> {
     let handle = tokio::task::spawn(async move {
         signal::ctrl_c().await.expect("");
-        println!(" - got interrupt");
+        info!(" - got interrupt");
         let _ = signal_tx.send(());
         let _ = server_tx.send(());
         tokio::time::sleep(Duration::from_millis(100)).await;
