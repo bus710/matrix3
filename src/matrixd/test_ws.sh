@@ -3,7 +3,7 @@
 set -e
 
 echo "WebSocket connection"
-curl --location '127.0.0.1:8080/ws' -X GET -v \
+curl 127.0.0.1:8080/ws -X GET -v \
     -i \
     -N \
     -H "connection: upgrade" \
