@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use crate::matrix;
 use futures::SinkExt;
 use futures::StreamExt;
@@ -111,10 +109,7 @@ async fn ws_handler(
     ws_rx: crossbeam_channel::Receiver<matrix::Data>,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     info!("ws");
-    ws.on_upgrade(move |websocket| ws_connected(websocket, ws_rx));
-
-    tokio::time::sleep(Duration::from_millis(10000)).await;
-    Ok(warp::reply::with_status("", http::StatusCode::OK))
+    Ok(ws.on_upgrade(move |websocket| ws_connected(websocket, ws_rx)))
 }
 
 async fn ws_connected(websocket: WebSocket, ws_rx: crossbeam_channel::Receiver<matrix::Data>) {
@@ -122,7 +117,13 @@ async fn ws_connected(websocket: WebSocket, ws_rx: crossbeam_channel::Receiver<m
     let (mut tx, mut rx) = websocket.split();
     tokio::task::spawn(async move {
         loop {
-            let d = ws_rx.recv().unwrap();
+            let d = match ws_rx.recv() {
+                Ok(v) => v,
+                Err(e) => {
+                    info!("{:?}", e.to_string());
+                    break;
+                },
+            };
             // Create a buffer to match the channel
             let mut d2 = Data::new();
             // Map the data from R32:32 to R64
@@ -184,7 +185,10 @@ pub async fn run(
         .and(with_matrix_tx.clone())
         .and_then(random_handler);
 
-    let ws_route = warp::path("ws")
+    let ws_route = warp::any()
+        .and(warp::path("v1"))
+        .and(warp::path("ws"))
+        .and(warp::path::end())
         .and(warp::ws())
         .and(with_ws_rx.clone())
         .and_then(ws_handler);
