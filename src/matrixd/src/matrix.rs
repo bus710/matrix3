@@ -8,6 +8,7 @@ const ADDR_MATRIX: u16 = 0x0046;
 const I2C_DATA_LEN: usize = 193;
 const COLOR_DATA_LEN: usize = 64;
 
+#[derive(Clone)]
 pub struct Data {
     pub r: [u8; COLOR_DATA_LEN],
     pub g: [u8; COLOR_DATA_LEN],
@@ -28,6 +29,7 @@ struct SenseHat {
     matrix: I2c,
     buffer: [u8; I2C_DATA_LEN],
     matrix_rx: crossbeam_channel::Receiver<Data>,
+    ws_tx: crossbeam_channel::Sender<Data>,
     signal_rx: crossbeam_channel::Receiver<()>,
 }
 
@@ -35,6 +37,7 @@ impl SenseHat {
     pub fn new(
         signal_rx: crossbeam_channel::Receiver<()>,
         matrix_rx: crossbeam_channel::Receiver<Data>,
+        ws_tx: crossbeam_channel::Sender<Data>,
     ) -> Result<SenseHat, String> {
         // Check the platform
         let r = DeviceInfo::new();
@@ -59,6 +62,7 @@ impl SenseHat {
             matrix: r,
             buffer: [0; I2C_DATA_LEN],
             matrix_rx,
+            ws_tx,
             signal_rx,
         })
     }
@@ -96,11 +100,12 @@ pub struct SenseHatRunner {
 
 impl SenseHatRunner {
     pub fn new(
-        signal_rx: crossbeam_channel::Receiver<()>,
         matrix_rx: crossbeam_channel::Receiver<Data>,
+        ws_tx: crossbeam_channel::Sender<Data>,
+        signal_rx: crossbeam_channel::Receiver<()>,
     ) -> Result<SenseHatRunner, String> {
         // Create a new SenseHat instance
-        let sh = match SenseHat::new(signal_rx, matrix_rx) {
+        let sh = match SenseHat::new(signal_rx, matrix_rx, ws_tx) {
             Ok(v) => v,
             Err(e) => panic!("{}", e.to_string()),
         };
@@ -116,13 +121,11 @@ impl SenseHatRunner {
     //     sh.tx.clone()
     // }
 
-    pub async fn run(&mut self) 
-    -> Result<tokio::task::JoinHandle<()>, String> {
+    pub async fn run(&mut self) -> Result<tokio::task::JoinHandle<()>, String> {
         // Clone RC
         let sh = self.sense_hat.clone();
         // Spawn
-        let handle = 
-        tokio::task::spawn(async move {
+        let handle = tokio::task::spawn(async move {
             // Lock
             let mut sh = sh.lock().await;
             // Loop
@@ -130,7 +133,10 @@ impl SenseHatRunner {
                 crossbeam_channel::select! {
                     recv(sh.matrix_rx) -> v => {
                         match v {
-                            Ok(v) => {sh.write_data(v).unwrap();},
+                            Ok(v) => {
+                                let _ = sh.write_data(v.clone()).unwrap();
+                                let _ = sh.ws_tx.send(v);
+                            },
                             Err(_) => (),
                         };
                     },

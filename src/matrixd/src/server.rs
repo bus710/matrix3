@@ -1,13 +1,17 @@
 use crate::matrix;
+use futures::SinkExt;
+use futures::{FutureExt, StreamExt};
 use rand::{self, Rng};
 use serde_derive::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 use warp::http;
+use warp::ws::Message;
+use warp::ws::WebSocket;
 use warp::Filter;
 
 // Serde doesn't support array format with 64 items -> go with 32 for now
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Data {
+struct Data {
     pub r0: [u8; 32],
     pub r1: [u8; 32],
     pub g0: [u8; 32],
@@ -16,14 +20,27 @@ pub struct Data {
     pub b1: [u8; 32],
 }
 
+impl Data {
+    fn new() -> Self {
+        Data {
+            r0: [0; 32],
+            r1: [0; 32],
+            g0: [0; 32],
+            g1: [0; 32],
+            b0: [0; 32],
+            b1: [0; 32],
+        }
+    }
+}
+
 // Returns pong when /v1/ping gets hit
-pub async fn pong_handler() -> Result<impl warp::Reply, warp::Rejection> {
+async fn pong_handler() -> Result<impl warp::Reply, warp::Rejection> {
     println!("pong");
     Ok(warp::reply::with_status("pong ", http::StatusCode::OK))
 }
 
 // Passes the given matrix value to SenseHat driver
-pub async fn matrix_handler(
+async fn matrix_handler(
     d: Data,
     matrix_tx: crossbeam_channel::Sender<matrix::Data>,
 ) -> Result<impl warp::Reply, warp::Rejection> {
@@ -66,7 +83,7 @@ pub async fn matrix_handler(
 }
 
 // Passes a random matrix value to SenseHat driver
-pub async fn random_handler(
+async fn random_handler(
     matrix_tx: crossbeam_channel::Sender<matrix::Data>,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     // Create a buffer to match the channel
@@ -84,14 +101,46 @@ pub async fn random_handler(
     Ok(warp::reply::with_status("", http::StatusCode::OK))
 }
 
+// Broadcast the current value (of SenseHat) to connected web socket clients
+async fn ws_handler(
+    ws: warp::ws::Ws,
+    ws_rx: crossbeam_channel::Receiver<matrix::Data>,
+) -> Result<impl warp::Reply, warp::Rejection> {
+    //
+    ws.on_upgrade(|websocket| {
+        let (tx, rx) = websocket.split();
+        loop {
+            let d = ws_rx.recv().unwrap();
+            // Create a buffer to match the channel
+            let mut d2 = Data::new();
+            // Map the data from R32:32 to R64
+            for i in 0..32 {
+                d2.r0[i] = d.r[i];
+                d2.r1[i] = d.r[i + 32];
+                d2.g0[i] = d.g[i];
+                d2.g1[i] = d.g[i + 32];
+                d2.b0[i] = d.b[i];
+                d2.b1[i] = d.b[i + 32];
+            }
+            let v = serde_json::to_string(&d2).unwrap();
+            tx.send(Message::text(v));
+        }
+    });
+
+    Ok(warp::reply::with_status("", http::StatusCode::OK))
+}
+
 pub async fn run(
     matrix_tx: crossbeam_channel::Sender<matrix::Data>,
+    ws_rx: crossbeam_channel::Receiver<matrix::Data>,
     mut server_rx: mpsc::UnboundedReceiver<()>,
-    // ) {
 ) -> Result<tokio::task::JoinHandle<()>, String> {
+    // Create filters
     let matrix_tx_filter = warp::any().map(move || matrix_tx.clone());
+    let ws_rx_filter = warp::any().map(move || ws_rx.clone());
     let body_size_filter = warp::body::content_length_limit(1024 * 32).and(warp::body::json());
 
+    // Create routes
     let ping_route = warp::any()
         .and(warp::path("v1"))
         .and(warp::path("ping"))
@@ -113,7 +162,16 @@ pub async fn run(
         .and(matrix_tx_filter.clone())
         .and_then(random_handler);
 
-    let routes = ping_route.or(matrix_route).or(random_route);
+    let ws_route = warp::any()
+        .and(warp::path("v1"))
+        .and(warp::path("ws"))
+        .and(warp::path::end())
+        .and(warp::ws())
+        .and(ws_rx_filter.clone())
+        .and_then(ws_handler);
+
+    // Conbine routes and add CORS rule
+    let routes = ping_route.or(matrix_route).or(random_route).or(ws_route);
     let routes = routes.with(warp::cors().allow_any_origin());
 
     let (addr, server) =
