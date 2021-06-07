@@ -184,9 +184,7 @@ pub async fn run(
         .and(with_matrix_tx.clone())
         .and_then(random_handler);
 
-    let ws_route = warp::path("v1")
-        .and(warp::path("ws"))
-        .and(warp::path::end())
+    let ws_route = warp::path("ws")
         .and(warp::ws())
         .and(with_ws_rx.clone())
         .and_then(ws_handler);
