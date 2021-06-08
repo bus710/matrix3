@@ -8,14 +8,28 @@
 
 ## Prep
 
-```$
+```sh
+$ curl https://get.wasmer.io -sSfL | sh
 $ rustup target add wasm32-unknown-unknown
 $ cargo install wasm-pack
-$ curl https://get.wasmer.io -sSfL | sh
+$ cargo install wasm-gc # optional
 ```
+
+## Edit
+
+There are particular things to do make a rust project to be WASM compatible.
 
 ## Build
 
+```sh
+$ cargo build --target wasm32-unknown-unknown --release
 
+# optional
+
+```
 
 ## Run
+
+```sh
+$ wasmer run blinker.wasm
+```
