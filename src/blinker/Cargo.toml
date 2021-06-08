@@ -1,12 +1,16 @@
 [package]
-name = "blinker"
-version = "0.1.0"
 authors = ["bus710 <bus710@gmail.com>"]
 edition = "2018"
+name = "blinker"
+version = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tokio = { version = "1.6.1", features = ["full"] }
-reqwest = { version = "0.11.3", features = ["json"] }
-tungstenite = "0.13.0"
+reqwest = {version = "0.11.3", features = ["json"]}
+tokio = {version = "1.6.1", features = ["full"]}
+crossbeam-channel = "0.5.1"
+futures = "0.3.15"
+serde = {version = "1.0.126", features = ["derive"]}
+serde_derive = "1.0.126"
+serde_json = "1.0.64"
