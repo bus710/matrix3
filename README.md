@@ -2,14 +2,14 @@
 
 <img src="assets/heart.png" width="300">
 
-A toy project to drive Sense Hat's LED matrix by using Rust and Flutter 
+A toy project to drive Sense Hat's LED matrix by using Rust and Flutter. 
 
 <br/><br/>
 
 ## 1. Description
 
 This project consists of 2 parts:
-- The UI: a simple web UI based on Flutter/Web that can modify the matrix data for 64 LEDs on Sense Hat.
+- The UI: a simple web UI based on [egui](https://github.com/emilk/egui) that can modify the matrix data for 64 LEDs on Sense Hat.
 - The service: a Rust based Linux system daemon with WebSocket that accepts parameters from the web UI and controls the LEDs via I2C.
 
 <br/>
@@ -34,6 +34,13 @@ Enable i2c communication by using raspi-config.
 
 ```sh
 $ sudo raspi-config
+# Interface options => I2C => Enable
+
+# To confirm:
+# The entry 0x46 should have some value, which indicate existence of AATINY MCU
+# https://pinout.xyz/pinout/sense_hat
+$ sudo apt install i2c-tools
+$ sudo i2cdetect -y 1 
 ```
 
 <br/>
