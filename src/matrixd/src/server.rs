@@ -5,6 +5,7 @@ use rand::{self, Rng};
 use serde_derive::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 use warp::http;
+use warp::http::Method;
 use warp::ws::Message;
 use warp::ws::WebSocket;
 use warp::Filter;
@@ -36,7 +37,7 @@ impl Data {
 // Returns pong when /v1/ping gets hit
 async fn pong_handler() -> Result<impl warp::Reply, warp::Rejection> {
     info!("pong");
-    Ok(warp::reply::with_status("pong ", http::StatusCode::OK))
+    Ok(warp::reply::with_status("pong", http::StatusCode::OK))
 }
 
 // Passes the given matrix value to SenseHat driver
@@ -78,7 +79,7 @@ async fn matrix_handler(
     matrix_tx.send(d2).unwrap();
     // Return result
     Ok(warp::reply::with_status(
-        "".to_string(),
+        "matrix".to_string(),
         http::StatusCode::OK,
     ))
 }
@@ -100,7 +101,7 @@ async fn random_handler(
     // Send data
     matrix_tx.send(d2).unwrap();
     // Return result
-    Ok(warp::reply::with_status("", http::StatusCode::OK))
+    Ok(warp::reply::with_status("random", http::StatusCode::OK))
 }
 
 // Broadcast the current value (of SenseHat) to connected web socket clients
@@ -122,7 +123,7 @@ async fn ws_connected(websocket: WebSocket, ws_rx: crossbeam_channel::Receiver<m
                 Err(e) => {
                     info!("{:?}", e.to_string());
                     break;
-                },
+                }
             };
             // Create a buffer to match the channel
             let mut d2 = Data::new();
@@ -195,10 +196,31 @@ pub async fn run(
 
     // Combine routes and add CORS rule
     let routes = ping_route.or(matrix_route).or(random_route).or(ws_route);
-    let routes = routes.with(warp::cors().allow_any_origin());
+    let cors = warp::cors()
+        .allow_any_origin()
+        .allow_headers(vec![
+            "Access-Control-Allow-Headers",
+            "Access-Control-Request-Method",
+            "Access-Control-Request-Headers",
+            "Origin",
+            "Accept",
+            "X-Requested-With",
+            "Content-Type",
+        ])
+        .allow_methods(&[
+            Method::GET,
+            Method::POST,
+            Method::PUT,
+            Method::PATCH,
+            Method::DELETE,
+            Method::OPTIONS,
+            Method::HEAD,
+        ]);
+
+    let routes = routes.with(cors);
 
     let (addr, server) =
-        warp::serve(routes).bind_with_graceful_shutdown(([0, 0, 0, 0], 8080), async move {
+        warp::serve(routes).bind_with_graceful_shutdown(([0, 0, 0, 0], 8000), async move {
             let _ = server_rx.recv().await.unwrap();
         });
 

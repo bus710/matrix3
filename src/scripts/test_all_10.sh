@@ -3,7 +3,7 @@
 set -e
 
 echo "Send all 10 request"
-curl --location '127.0.0.1:8080/v1/matrix' \
+curl --location '127.0.0.1:8000/v1/matrix' \
 --header 'Content-Type: application/json' \
 --header 'Content-Type: text/plain' \
 --data-raw '{
