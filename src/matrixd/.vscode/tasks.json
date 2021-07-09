@@ -1,0 +1,30 @@
+{
+	"version": "2.0.0",	
+	"type": "shell",	
+	"echoCommand": true,
+	"cwd": "${workspaceFolder}",
+	"tasks": [
+		{
+			"label": "Build and Run for X64",
+			"command": "go build -o matrixX64 && ./matrixX64",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"problemMatcher": [
+				"$go"
+			]
+		},
+		{
+			"label": "Build and Run for ARM",
+			"command": "env GOOS=linux GOARCH=arm GOARM=7 go build -o matrixARM",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"problemMatcher": [
+				"$go"
+			]
+		}
+	]
+}
