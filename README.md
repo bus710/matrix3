@@ -19,7 +19,7 @@ This project consists of 2 parts:
 - Some familiarity regarding Raspberry Pi OS and terminal interface.
 - Raspberry Pi 4B and Sense Hat
 - Boot parameter: RPI4 and Sense Hat have some issues and it blocks the boot process. To avoid the issues, configure as below when Sense Hat is not installed:
-     - For Raspbian OS, add **hdmi_force_hotplug=1** to /boot/config.txt
+     - For Raspberry Pi OS, add **hdmi_force_hotplug=1** to /boot/config.txt
      - For Ubuntu, add **hdmi_force_hotplug=1** to /boot/firmware/config.txt
 - Go and Svelte SDK installed in Pi
 
