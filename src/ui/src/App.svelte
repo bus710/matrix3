@@ -32,11 +32,9 @@
 		padding: 0.1em;
 		margin: 0 auto;
 		max-width: none;
-		box-shadow: 0px 0px 0px 0px #111111;
 	}
 
 	h1 {
-		/* color: #ff3e00; */
 		color: #ffffff;
 		text-transform: none; /* uppercase */
 		font-size: 1.3em;

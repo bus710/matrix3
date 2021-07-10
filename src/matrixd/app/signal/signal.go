@@ -1,7 +1,6 @@
 package signal
 
 import (
-	"log"
 	"os"
 	"os/signal"
 	"sync"
@@ -10,6 +9,7 @@ import (
 
 	server "github.com/bus710/matrixd/src/matrixd/app/api"
 	matrix "github.com/bus710/matrixd/src/matrixd/app/matrix"
+	window "github.com/bus710/matrixd/src/matrixd/app/window"
 )
 
 // TermSignal ...
@@ -17,17 +17,19 @@ type TermSignal struct {
 	// Join
 	wait *sync.WaitGroup
 	// Channels
-	sigterm chan os.Signal
+	sigterm              chan os.Signal
+	windowCloseIndicator chan bool
 }
 
 var Signal TermSignal
 
 // Init ...
-func (sig *TermSignal) Init(wait *sync.WaitGroup) {
+func (sig *TermSignal) Init(wait *sync.WaitGroup, windowCloseIndicator chan bool) {
 	// Store join
 	sig.wait = wait
 	// Initialize channels
 	sig.sigterm = make(chan os.Signal, 1)
+	sig.windowCloseIndicator = windowCloseIndicator
 }
 
 // Run catch the interrupts from keyboard (CTRL+C)
@@ -36,8 +38,14 @@ func (sig *TermSignal) Run() {
 	signal.Notify(sig.sigterm, syscall.SIGINT, syscall.SIGTERM)
 
 	// Wait for the keyboard interrupt.
-	received := <-sig.sigterm
-	log.Println("Received a CTRL+C", received)
+	select {
+	case <-sig.sigterm:
+	case <-sig.windowCloseIndicator:
+	}
+
+	// Shutdown webview
+	time.Sleep(time.Millisecond * 100)
+	window.Shutdown()
 
 	// Shutdown matrix controller
 	time.Sleep(time.Millisecond * 100)

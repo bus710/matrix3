@@ -61,7 +61,7 @@ func (wserver *WebServer) Run() (err error) {
 		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept},
 	}))
 	// Route
-	wserver.instance.Static("/", "../public")
+	wserver.instance.Static("/", "../../ui/public")
 	wserver.instance.POST("/v1/ping", pingHandler)
 	wserver.instance.POST("/v1/matrix", matrixHandler)
 	wserver.instance.POST("/v1/random", randomHandler)
