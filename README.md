@@ -78,7 +78,7 @@ The UI can be shown on the screen like the below image and the components have f
 
 <br/>
 
-<img src="assets/ui_example.png" width="200">
+<img src="assets/ui_example.png" width="640">
 
 <br/><br/>
 
