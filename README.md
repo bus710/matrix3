@@ -1,4 +1,4 @@
-# Matrixd - Matrix Daemon 
+# Matrixd
 
 <img src="assets/heart.png" width="300">
 
