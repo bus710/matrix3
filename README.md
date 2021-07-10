@@ -70,11 +70,12 @@ $ ./matrixd-arm # or ./matrixd-arm64
 
 ## 3. Usage
 
-The UI can be shown on the screen like the below image and the components have features like this:
+The UI looks like the image below and the components have features like these:
 - Each box represents each LED on Sense Hat (each box can be pressed to be chosen).
-- The sliders can change the color of boxes selected.
-- All and None buttons can be used to pick all or none of the boxes.
-- The red button can be used to send the configuration to the backend. 
+- The RGB sliders change the color of boxes selected.
+- All and None buttons pick all or none of the boxes.
+- The **random** button sends a random configuration to the backend. 
+- The **submit** button sends the current configuration to the backend. 
 
 <br/>
 
