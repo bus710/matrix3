@@ -25,7 +25,7 @@ func (wv *WebView) Run() {
 	debug := true
 	wv.view = webview.New(debug)
 	defer wv.view.Destroy()
-	wv.view.SetSize(490, 768, webview.HintFixed)
+	wv.view.SetSize(500, 695, webview.HintFixed)
 	wv.view.Navigate("http://localhost:8000")
 	wv.view.Run()
 

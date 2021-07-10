@@ -5,6 +5,7 @@ for (let i = 0; i < 64; i++) {
     dots.push({ selected: false, background_color: "#000000ff", font_color: "#ffffffff" });
 }
 
+export const stored_latest_command = writable("submit");
 export const stored_color = writable({ sliderR: 0, sliderG: 0, sliderB: 0, alpha: 0 });
 export const stored_dots = writable(dots);
 export const stored_select = writable("");

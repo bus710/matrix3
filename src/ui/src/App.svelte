@@ -9,7 +9,7 @@
 </svelte:head>
 
 <main>
-	<h1>{name}</h1>
+	<!-- <h1>{name}</h1> -->
 </main>
 
 <Matrix />
@@ -28,17 +28,10 @@
 
 	main {
 		text-align: center;
-		background-color: #3333ff;
+		background-color: white;
 		padding: 0.1em;
-		margin: 0 auto;
+		margin: 10px auto;
 		max-width: none;
-	}
-
-	h1 {
-		color: #ffffff;
-		text-transform: none; /* uppercase */
-		font-size: 1.3em;
-		font-weight: 300;
 	}
 
 	div {

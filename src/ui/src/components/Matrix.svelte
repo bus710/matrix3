@@ -1,8 +1,11 @@
 <script>
+    import { get } from "svelte/store";
+
     import { stored_color } from "../stores";
     import { stored_dots } from "../stores";
     import { stored_select } from "../stores";
     import { stored_message } from "../stores";
+    import { stored_latest_command } from "../stores";
 
     let background_color = "#000000ff"; // RGBA
     let font_color = "#ffffffff";
@@ -80,11 +83,20 @@
                     numHex(B * 3 + 32) +
                     numHex(255);
                 dots[i].background_color = background_color;
-                dots[i].selected = false;
+                if (get(stored_latest_command) === "random") {
+                    dots[i].selected = false;
+                }
             }
             stored_dots.set(dots);
-            stored_color.set({ sliderR: 0, sliderG: 0, sliderB: 0, alpha: 0 });
-            background_color = "#000000ff"; // RGBA
+            // stored_color.set({ sliderR: 0, sliderG: 0, sliderB: 0, alpha: 0 });
+            let color = get(stored_color);
+            background_color =
+                "#" +
+                numHex(color.sliderR * 3 + 32) +
+                numHex(color.sliderG * 3 + 32) +
+                numHex(color.sliderB * 3 + 32) +
+                numHex(255);
+            // background_color = "#000000ff"; // RGBA
         }
     });
 

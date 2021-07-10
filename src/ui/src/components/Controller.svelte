@@ -3,6 +3,7 @@
     import { stored_dots } from "../stores";
     import { stored_color } from "../stores";
     import { stored_select } from "../stores";
+    import { stored_latest_command } from "../stores";
 
     let color = get(stored_color);
     let sliderR = color.sliderR;
@@ -19,7 +20,12 @@
     // Select all buttons in Matrix component
     function select_all() {
         console.log("all");
-        stored_color.set({ sliderR: sliderR, sliderG: sliderG, sliderB: sliderB, alpha: 255 });
+        stored_color.set({
+            sliderR: sliderR,
+            sliderG: sliderG,
+            sliderB: sliderB,
+            alpha: 255,
+        });
         stored_select.set("all");
         stored_select.set("");
     }
@@ -34,6 +40,7 @@
     // Post to the random API of backend
     async function random() {
         console.log("random");
+        stored_latest_command.set("random");
         let host = "http://" + location.hostname + ":8000/v1/random";
         console.log(host);
         let options = {
@@ -42,11 +49,18 @@
         await fetch(host, options)
             .then((response) => console.log("response: ", response))
             .catch((error) => console.error("error: ", error));
+        // Unselect all when calling random API
+        let dots = get(stored_dots);
+        for (let i = 0; i < 64; i++) {
+            dots[i].selected = false;
+        }
+        stored_dots.set(dots);
     }
 
     // Post to the matrix API of backend with dots as the body
     function submit() {
         console.log("submit");
+        stored_latest_command.set("submit");
         // Each element of body should have 32 entries
         let dots2 = {
             R: [],
