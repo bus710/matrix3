@@ -29,7 +29,7 @@ This project consists of 2 parts:
 
 <br/>
 
-### 2.1 I2C interface activation
+### 2.1 i2c activation
 
 Enable i2c communication by using raspi-config.
 
@@ -50,26 +50,25 @@ $ sudo i2cdetect -y 1
 
 Clone and build:
 ```sh
+$ sudo apt install -y \
+    libwebkit2gtk-4.0-dev webkit2gtk-driver
 $ git clone https://github.com/bus710/matrixd.git
 
+# For UI
 $ cd matrixd/src/ui
 $ npm install
 $ npm run build
 
+# For service
 $ cd ../matrixd
-
-# For 32 bit Raspbian OS
-$ make build-arm 
-$ ./bin/matrixd-arm
-
-# For 64 bit Raspbian OS
-$ make build-arm64
-$ ./bin/matrixd-arm64
+$ make build-arm # or make build-arm64
+$ cd bin
+$ ./matrixd-arm # or ./matrixd-arm64
 ```
 
 <br/><br/>
 
-## 3. How to config and run
+## 3. Usage
 
 The UI can be shown on the screen like the below image and the components have features like this:
 - Each box represents each LED on Sense Hat (each box can be pressed to be chosen).
