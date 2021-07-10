@@ -1,36 +1,31 @@
-package matrixd
+package main
 
 import (
 	"log"
 	"sync"
 
-	api "github.com/bus710/matrixd/src/matrixd/app/api"
+	server "github.com/bus710/matrixd/src/matrixd/app/api"
 	matrix "github.com/bus710/matrixd/src/matrixd/app/matrix"
-	utils "github.com/bus710/matrixd/src/matrixd/app/utils"
+	signal "github.com/bus710/matrixd/src/matrixd/app/signal"
 )
 
 func main() {
 	log.Println("Hello!")
-	log.Println("Please open the 3000 port.")
 
 	waitInstance := sync.WaitGroup{}
-	senseHatInstance := matrix.Matrix{}
-	serverInstance := api.WebServer{}
-	signalInstance := utils.Signal{}
 
-	senseHatInstance.Init(&waitInstance)
-	serverInstance.Init(&waitInstance, &senseHatInstance)
-	signalInstance.Init(&waitInstance, &serverInstance, &senseHatInstance)
+	matrix.Matrix.Init(&waitInstance)
+	server.Server.Init(&waitInstance)
+	signal.Signal.Init(&waitInstance)
 
 	waitInstance.Add(1)
-	go signalInstance.Catcher()
+	go signal.Signal.Run()
 	waitInstance.Add(1)
-	go senseHatInstance.Run()
+	go matrix.Matrix.Run()
 	waitInstance.Add(1)
-	go serverInstance.Run()
+	go server.Server.Run()
 
 	waitInstance.Wait()
 
-	log.Println()
-	log.Println("See you again!")
+	log.Println("Bye!")
 }

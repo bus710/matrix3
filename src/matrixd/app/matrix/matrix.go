@@ -1,6 +1,3 @@
-/* About sensorHat.go
-This module has been developed to access the HAT (of course...). */
-
 package matrix
 
 import (
@@ -10,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bus710/matrixd/src/matrixd/app/common"
 	"periph.io/x/periph/conn"
 	"periph.io/x/periph/conn/i2c"
 	"periph.io/x/periph/conn/i2c/i2creg"
@@ -17,141 +15,197 @@ import (
 )
 
 // Matrix ...
-type Matrix struct {
-	// app-wide items
-	wait          *sync.WaitGroup
-	ChanStop      chan bool
-	ChanDataReady chan bool
+var Matrix SenseHatMatrix
 
-	// local items
+// SenseHatMatrix ...
+type SenseHatMatrix struct {
+	// Join
+	wait *sync.WaitGroup
+	// Mutex
+	Mux sync.RWMutex
+	// Channels
+	chanStop  chan bool
+	chanData  chan common.MatrixData
+	observers []common.Observer
+	// Local items
 	isARM  bool
 	i2cBus i2c.BusCloser
 	i2cDev i2c.Dev
 	i2cCon conn.Conn
-
-	// buffers for the matrix
-	matrixAddr uint16
-	dotIndex   uint8
-	bufRaw     [193]byte
-	BufR       [64]byte
-	BufG       [64]byte
-	BufB       [64]byte
+	// Elements for the matrix
+	matrixAddr    uint16
+	bufRaw        [193]byte
+	butMatrixData common.MatrixData
 }
 
-// init - assigns data and channels
-func (sh *Matrix) Init(wait *sync.WaitGroup) {
-	log.Println()
-	sh.ChanStop = make(chan bool, 1)
-	sh.ChanDataReady = make(chan bool, 1)
-	sh.wait = wait
+// Init
+func (mx *SenseHatMatrix) Init(wait *sync.WaitGroup) {
+	// Store join
+	mx.wait = wait
+	// Channels
+	mx.chanStop = make(chan bool, 1)
+	mx.chanData = make(chan common.MatrixData, 3)
+	// Buffers
+	mx.butMatrixData = common.MatrixData{}
 
-	// To make sure the arch afterwords
-	if strings.Contains(runtime.GOARCH, "arm") {
-		// To check the archteture afterwords
-		sh.isARM = true
+	// Confirm the archtecture
+	if strings.Contains(runtime.GOARCH, "arm") ||
+		strings.Contains(runtime.GOARCH, "arm64") {
+		// Indicate the arcitecture
+		mx.isARM = true
 
-		// To initialize the baseline drivers
+		// Initialize the baseline drivers
 		_, err := host.Init()
 		if err != nil {
 			log.Println(err)
 		}
 
-		// To open the i2c of RPI
+		// Open the i2c of RPI
 		bus, err := i2creg.Open("")
 		if err != nil {
 			log.Println(err)
 		}
 
-		// To initialize some numbers
-		sh.matrixAddr = uint16(0x0046) // SensorHat's AVR MCU uses 0x46 for the matrix
-		sh.dotIndex = 0
+		// Initialize some numbers
+		mx.matrixAddr = uint16(0x0046) // SensorHat's AVR MCU uses ID 0x46 for the LED matrix
 
-		// To initialize the i2c bus
-		sh.i2cBus = bus
-		// To avoid Vet's warning, the specific keys are being used here
-		sh.i2cDev = i2c.Dev{Bus: sh.i2cBus, Addr: sh.matrixAddr}
-		sh.i2cCon = &sh.i2cDev
+		// Initialize the i2c bus
+		mx.i2cBus = bus
+		mx.i2cDev = i2c.Dev{Bus: mx.i2cBus, Addr: mx.matrixAddr}
+		mx.i2cCon = &mx.i2cDev
 
-		err = sh.display()
+		// Test
+		mx.display_test()
+
+		// Turn off all
+		d := common.MatrixData{}
+		err = mx.display(d)
 		if err != nil {
 			log.Println("Cannot use the i2c bus")
 		}
-
 	} else {
 		// If the arch is not ARM...
-		sh.isARM = false
+		mx.isARM = false
 	}
 }
 
-// run - runs the main go routine
-func (sh *Matrix) Run() {
-	tick := time.Tick(1000 * time.Millisecond)
+func (mx *SenseHatMatrix) Shutdown() {
+	mx.chanStop <- true
+}
 
-	if sh.isARM {
-		defer sh.i2cBus.Close()
+// Run ...
+func (mx *SenseHatMatrix) Run() {
+	tick := time.NewTicker(1000 * time.Millisecond)
+
+	if mx.isARM {
+		defer mx.i2cBus.Close()
 	}
 
-StopFlag:
+loop:
 	for {
 		select {
-		case <-sh.ChanStop:
-			// To shutdown gracefully.
-			// Some cleaning action can be added here.
-			log.Println("got a signal from the chanStop")
-			break StopFlag
-		case <-sh.ChanDataReady:
-			// When the webserver safely received a chunk of data
-			if sh.isARM {
-				log.Println("data ready")
-				err := sh.display()
+		// Shutdown gracefully
+		case <-mx.chanStop:
+			break loop
+		// When the webserver safely received a chunk of data
+		case d := <-mx.chanData:
+			mx.Mux.Lock()
+			if mx.isARM {
+				err := mx.display(d)
 				if err != nil {
-					log.Println("error is occurred")
+					log.Println(err)
 				}
 			}
-		case <-tick:
-			// To run some task periodically
+			mx.butMatrixData = d
+			mx.broadcast()
+			mx.Mux.Unlock()
+		// To run some task periodically
+		case <-tick.C:
 			// log.Println("test from the sensorhat routine")
 		}
 	}
-	sh.wait.Done()
+	mx.wait.Done()
 }
 
-func (sh *Matrix) display() (err error) {
+// Push expose the data channel
+func Push(d *common.MatrixData) (err error) {
+	Matrix.chanData <- *d
+	return nil
+}
 
-	// To set a certain pixel
-	// sh.dotIndex++
-	// if sh.matrixAddr > 63 {
-	// 	sh.dotIndex = 0
-	// }
-	// sh.bufR[sh.dotIndex] = 0x20
-	// sh.bufG[sh.dotIndex] = 0x00
-	// sh.bufB[sh.dotIndex] = 0x00
-	// sh.bufRaw[sh.dotIndex] = 0x00
+// AddObserver ...
+func AddObserver(id string, ch chan common.MatrixData) {
+	observer := common.Observer{
+		ID:       id,
+		ChanData: ch,
+	}
+	Matrix.observers = append(Matrix.observers, observer)
+	log.Println("Add a new observer", id)
+}
 
-	// Actual mapping
+// RemoveObserver ...
+func RemoveObserver(id string) {
+	if len(Matrix.observers) == 0 {
+		return
+	}
+
+	index := 0
+	for i, observer := range Matrix.observers {
+		if observer.ID == id {
+			index = i
+			break
+		}
+	}
+	Matrix.observers = append(Matrix.observers[:index], Matrix.observers[len(Matrix.observers)-1])
+	log.Println("Remove an observer", id)
+}
+
+func (mx *SenseHatMatrix) display(d common.MatrixData) (err error) {
+	// Map RGB to Raw (linear)
 	j := int(0)
 	for i := 0; i < 64; i++ {
 		j = int(i/8) * 8
 		j = j + j
-		sh.bufRaw[i+j+1] = sh.BufR[i] / 4
-		sh.bufRaw[i+j+9] = sh.BufG[i] / 4
-		sh.bufRaw[i+j+17] = sh.BufB[i] / 4
+		mx.bufRaw[i+j+1] = d.R[i] / 4
+		mx.bufRaw[i+j+9] = d.G[i] / 4
+		mx.bufRaw[i+j+17] = d.B[i] / 4
 	}
 
-	// Actual writing
-	writtenData, err := sh.i2cDev.Write(sh.bufRaw[:])
+	// Write
+	writtenDataNum, err := mx.i2cDev.Write(mx.bufRaw[:])
 	if err != nil {
 		return err
-	} else if writtenData != 193 {
+	} else if writtenDataNum != 193 {
 		return err
 	}
 
-	log.Println(writtenData, "bytes were written to the matrix")
-	// log.Println(sh.bufRaw)
-
-	// sh.bufR[sh.dotIndex] = 0x00
-	// sh.bufG[sh.dotIndex] = 0x00
-	// sh.bufB[sh.dotIndex] = 0x00
-
 	return nil
+}
+
+func (mx *SenseHatMatrix) display_test() {
+	d := common.MatrixData{}
+	for i := 0; i < 64; i++ {
+		d.R[i] = 3
+		d.G[i] = 3
+		d.B[i] = 3
+	}
+	mx.display(d)
+	time.Sleep(time.Millisecond * 100)
+	for i := 0; i < 64; i++ {
+		d.R[i] = 0
+		d.G[i] = 0
+		d.B[i] = 0
+	}
+	mx.display(d)
+	time.Sleep(time.Millisecond * 100)
+}
+
+func (mx *SenseHatMatrix) broadcast() {
+	if len(mx.observers) == 0 {
+		return
+	}
+
+	for _, observer := range mx.observers {
+		observer.ChanData <- mx.butMatrixData
+	}
 }

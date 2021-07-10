@@ -1,9 +1,12 @@
-# MatrixD
+# Matrixd
 
 <br/>
 
 ## Build
 
 ```sh
-$ go build -race -tags debug -o bin/main cmd/matrixd.go
+# per target arch
+$ make build 
+$ make build-arm
+$ make build-arm64
 ```

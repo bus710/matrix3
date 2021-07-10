@@ -2,43 +2,47 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"log"
+	"math/rand"
 	"net/http"
-	"strconv"
 	"sync"
+	"time"
 
+	"github.com/bus710/matrixd/src/matrixd/app/api/message"
+	"github.com/bus710/matrixd/src/matrixd/app/common"
 	"github.com/bus710/matrixd/src/matrixd/app/matrix"
-	"github.com/bus710/matrixd/src/matrixd/app/message"
-	"golang.org/x/net/websocket"
+
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
-// WebServer - the main struct of this module
+// WebServer handles http requests
 type WebServer struct {
-	// app-wide items
-	wait     *sync.WaitGroup
-	senseHat *matrix.Matrix
-
-	// web items
-	instance *http.Server
-
-	// data
-	receivedItemWS *message.WebSocketMessage
-	responseItemWS *message.WebSocketMessage
+	// Join
+	wait *sync.WaitGroup
+	// Server
+	instance *echo.Echo
+	// Websocket
+	receivedItemWS *common.WebSocketMessage
+	responseItemWS *common.WebSocketMessage
 }
 
-// init - initializes the data and structs
-func (wserver *WebServer) Init(
-	wait *sync.WaitGroup,
-	senseHatInstance *matrix.Matrix) (err error) {
+var Server WebServer
 
+// Init ...
+func (wserver *WebServer) Init(wait *sync.WaitGroup) {
+	// Store join
 	wserver.wait = wait
-	wserver.instance = &http.Server{Addr: ":3000"}
-	wserver.senseHat = senseHatInstance
-	return nil
+	// Assign server instance
+	wserver.instance = echo.New()
 }
 
-func (wserver *WebServer) Shutdown(ctx context.Context) error {
+// Shutdown ...
+func (wserver *WebServer) Shutdown() error {
+	ctx, cancel := context.WithTimeout(
+		context.Background(), time.Millisecond*300)
+	defer cancel()
+
 	err := wserver.instance.Shutdown(ctx)
 	if err != nil {
 		log.Println(err)
@@ -47,95 +51,57 @@ func (wserver *WebServer) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-// run - delivers the static web files and serves the REST API (+ websocket)
+// Run ...
 func (wserver *WebServer) Run() (err error) {
-	// WebSocket
-	http.Handle("/message", websocket.Handler(wserver.socket))
-
-	// Web Contents
-	// The frontend side should be built by webdev build --output build
-	// Otherwise, the location will be ../front/build
-	http.Handle("/", http.FileServer(http.Dir("../front/build/web")))
-
-	// Server up and running
-	log.Println(wserver.instance.ListenAndServe())
+	// Middleware
+	wserver.instance.Use(middleware.Logger())
+	wserver.instance.Use(middleware.Recover())
+	wserver.instance.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: []string{"*"},
+		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept},
+	}))
+	// Route
+	wserver.instance.Static("/", "../public")
+	wserver.instance.POST("/v1/ping", pingHandler)
+	wserver.instance.POST("/v1/matrix", matrixHandler)
+	wserver.instance.POST("/v1/random", randomHandler)
+	wserver.instance.GET("/v1/ws", message.WebSocketHandler)
+	// Serve
+	err = wserver.instance.Start(":8000")
+	if err != http.ErrServerClosed {
+		log.Fatal(err)
+	}
 
 	wserver.wait.Done()
 	return nil
 }
 
-// socket - websocket handler
-func (wserver *WebServer) socket(wsocket *websocket.Conn) {
+func pingHandler(c echo.Context) error {
+	log.Println("ping")
+	return c.String(http.StatusOK, "pong")
+}
 
-	log.Println(wsocket.Request().RemoteAddr)
-	chanData := make(chan string, 1)
-	chanResponse := make(chan bool, 1)
+func matrixHandler(c echo.Context) error {
+	log.Println("matrix")
+	d := new(common.MatrixData)
+	err := c.Bind(d)
+	if err != nil {
+		return c.String(http.StatusNotFound, "matrix")
+	}
+	matrix.Push(d)
+	return c.String(http.StatusOK, "matrix")
+}
 
-	defer wsocket.Close()
+func randomHandler(c echo.Context) error {
+	log.Println("random")
+	d := new(common.MatrixData)
 
-	// Processing routine
-	go func() {
-		for {
-			select {
-			case data := <-chanData:
-				/* for future unmarshling
-				https://mholt.github.io/json-to-go/ */
-				var dataList message.MatrixData
-				// log.Println("Processing routine: " + data)
-
-				if err := json.Unmarshal([]byte(data), &dataList); err != nil {
-					log.Println(err)
-					chanResponse <- false
-				} else {
-					if len(dataList) == 64 {
-						// log.Println(dataList[0][0])
-
-						for i := 0; i < 64; i++ {
-							wserver.senseHat.BufR[i] = byte(dataList[i][0])
-							wserver.senseHat.BufG[i] = byte(dataList[i][1])
-							wserver.senseHat.BufB[i] = byte(dataList[i][2])
-						}
-
-						// To notify the data is ready to the sensorHat routine
-						wserver.senseHat.ChanDataReady <- true
-						// To notify the data is ready to the client
-						chanResponse <- true
-					} else {
-						chanResponse <- false
-					}
-				}
-			}
-		}
-	}()
-
-	// Sending routine
-	go func() {
-		for {
-			select {
-			case res := <-chanResponse:
-				wserver.responseItemWS = &message.WebSocketMessage{
-					Type: "response", Data: strconv.FormatBool(res)}
-				websocket.JSON.Send(wsocket, wserver.responseItemWS)
-			}
-		}
-	}()
-
-	wserver.receivedItemWS = &message.WebSocketMessage{}
-	// Receiving routine
-	for {
-		// receive a message using the codec
-		if err := websocket.JSON.Receive(
-			wsocket, &wserver.receivedItemWS); err != nil {
-			// log.Println(err)
-			break
-		} else {
-			messageType := wserver.receivedItemWS.Type
-			messageData := wserver.receivedItemWS.Data
-			log.Println("Received message type:", messageType)
-			// log.Println("Received message data:", messageData)
-			chanData <- messageData
-		}
+	for i := 0; i < 64; i++ {
+		d.R[i] = uint8(rand.Intn(64))
+		d.G[i] = uint8(rand.Intn(64))
+		d.B[i] = uint8(rand.Intn(64))
 	}
 
-	log.Println("Websocket closed")
+	matrix.Push(d)
+	return c.String(http.StatusOK, "random")
 }

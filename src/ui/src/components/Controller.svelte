@@ -49,38 +49,23 @@
         console.log("submit");
         // Each element of body should have 32 entries
         let dots2 = {
-            r0: [],
-            r1: [],
-            g0: [],
-            g1: [],
-            b0: [],
-            b1: [],
+            R: [],
+            G: [],
+            B: [],
         };
         let dots = get(stored_dots);
         // Need to re-arrange the dots to a compatible format as the body for the API
-        for (let i = 0; i < 32; i++) {
-            let d0 = dots[i].background_color;
-            let d1 = dots[i + 32].background_color;
-            // Upper 32 LEDs
-            d0 = hexToRgb(d0);
-            d0 = {
-                r: d0.r === 0 ? 0 : (d0.r - 32) / 3,
-                g: d0.g === 0 ? 0 : (d0.g - 32) / 3,
-                b: d0.b === 0 ? 0 : (d0.b - 32) / 3,
+        for (let i = 0; i < 64; i++) {
+            let d = dots[i].background_color;
+            d = hexToRgb(d);
+            d = {
+                r: d.r === 0 ? 0 : (d.r - 32) / 3,
+                g: d.g === 0 ? 0 : (d.g - 32) / 3,
+                b: d.b === 0 ? 0 : (d.b - 32) / 3,
             };
-            dots2.r0.push(d0.r);
-            dots2.g0.push(d0.g);
-            dots2.b0.push(d0.b);
-            // Lower 32 LEDs
-            d1 = hexToRgb(d1);
-            d1 = {
-                r: d1.r === 0 ? 0 : (d1.r - 32) / 3,
-                g: d1.g === 0 ? 0 : (d1.g - 32) / 3,
-                b: d1.b === 0 ? 0 : (d1.b - 32) / 3,
-            };
-            dots2.r1.push(d1.r);
-            dots2.g1.push(d1.g);
-            dots2.b1.push(d1.b);
+            dots2.R.push(d.r);
+            dots2.G.push(d.g);
+            dots2.B.push(d.b);
         }
         fetch_matrix(dots2);
     }

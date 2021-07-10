@@ -69,10 +69,10 @@
         console.log("ws:", "(", value.length, ")", value);
         if (value.length > 0) {
             let res = JSON.parse(value);
-            for (let i = 0; i < 32; i++) {
-                let R = res.r0[i];
-                let G = res.g0[i];
-                let B = res.b0[i];
+            for (let i = 0; i < 64; i++) {
+                let R = res.R[i];
+                let G = res.G[i];
+                let B = res.B[i];
                 background_color =
                     "#" +
                     numHex(R * 3 + 32) +
@@ -81,17 +81,6 @@
                     numHex(255);
                 dots[i].background_color = background_color;
                 dots[i].selected = false;
-                R = res.r1[i];
-                G = res.g1[i];
-                B = res.b1[i];
-                background_color =
-                    "#" +
-                    numHex(R * 3 + 32) +
-                    numHex(G * 3 + 32) +
-                    numHex(B * 3 + 32) +
-                    numHex(255);
-                dots[i + 32].background_color = background_color;
-                dots[i + 32].selected = false;
             }
             stored_dots.set(dots);
             stored_color.set({ sliderR: 0, sliderG: 0, sliderB: 0, alpha: 0 });
@@ -150,7 +139,7 @@
         padding: 0.2em;
         margin-top: 16px;
         margin-bottom: 24px;
-        margin-left: 20px;
+        margin-left: 2px;
         margin-right: 20px;
         max-width: 240px;
         box-shadow: 0px 0px 0px 0px #111111;
